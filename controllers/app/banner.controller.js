@@ -3,18 +3,18 @@ const saveBase64File = require('../../utils/saveBase64File');
 
 exports.createBanner = async (req, res) => {
   try {
-    const { type, title, content, video, link, active } = req.body;
+    const { type, title, content, link, active } = req.body;
 
-    // Save images if present
+    // Process uploaded files
     let images = [];
-    if (req.body.images && Array.isArray(req.body.images)) {
-      images = req.body.images.map(base64 => saveBase64File(base64, 'uploads'));
+    let video = null;
+
+    if (req.files['images']) {
+      images = req.files['images'].map(file => file.path);
     }
 
-    // Save video if present
-    let savedVideo = null;
-    if (video) {
-      savedVideo = saveBase64File(video, 'uploads');
+    if (req.files['video'] && req.files['video'][0]) {
+      video = req.files['video'][0].path;
     }
 
     const banner = new AppBanner({
@@ -22,22 +22,21 @@ exports.createBanner = async (req, res) => {
       title,
       content,
       images,
-      video: savedVideo,
+      video,
       link,
-      active
+      active: active === 'true' || active === true
     });
 
     await banner.save();
 
     res.status(201).json({
-      message: 'Banner created successfully',
+      message: '✅ Banner created successfully',
       data: banner
     });
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
-
 
 
 exports.getBanners = async (req, res) => {

@@ -1,10 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { createBanner, getBanners,updateBanner,updateBannerField,deleteBanner } = require('../../controllers/app/banner.controller');
-const { uploadBannerMedia } = require('../../middlewares/upload');
+const upload = require('../../middlewares/upload');
 
 // Expecting multiple images under field name "images"
-router.post('/create-banner', uploadBannerMedia.array('images'), createBanner);
+router.post(
+  '/create-banner',
+  upload.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'video', maxCount: 1 }
+  ]),
+  createBanner
+);
 router.get('/get-banners', getBanners);
 router.put('/update-banner/:id', updateBanner);
 router.patch('/update-field/:id', updateBannerField);
