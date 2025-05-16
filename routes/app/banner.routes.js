@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../../controllers/app/banner.controller');
+const controller = require('../../controllers/app/banner.controller');//same for site
 
 router.post('/add-banners', controller.createBanner);
 router.get('/get-banners', controller.getBanners);
