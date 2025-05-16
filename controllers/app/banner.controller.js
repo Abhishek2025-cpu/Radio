@@ -1,6 +1,4 @@
-const AppBanner = require('../../models/mongo/AppBanner.model');
-
-const AppBanner = require('../../models/mongo/AppBanner.model');
+const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
 
 exports.createBanner = async (req, res) => {
   try {
