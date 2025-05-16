@@ -6,4 +6,3 @@ const storage = multer.memoryStorage();
 const uploadBannerMedia = multer({ storage });
 
 module.exports = { uploadBannerMedia };
-s
