@@ -1,41 +1,41 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
+const saveBase64File = require('../../utils/saveBase64File');
 
 exports.createBanner = async (req, res) => {
   try {
-    const {
-      type, title, content, video, link, active
-    } = req.body;
+    const { type, title, content, video, link, active } = req.body;
 
+    // Save images if present
     let images = [];
+    if (req.body.images && Array.isArray(req.body.images)) {
+      images = req.body.images.map(base64 => saveBase64File(base64, 'uploads'));
+    }
 
-    // Convert uploaded images to base64
-    if (req.files && req.files.length > 0) {
-      images = req.files.map(file => {
-        const base64 = file.buffer.toString('base64');
-        return `data:${file.mimetype};base64,${base64}`;
-      });
+    // Save video if present
+    let savedVideo = null;
+    if (video) {
+      savedVideo = saveBase64File(video, 'uploads');
     }
 
     const banner = new AppBanner({
       type,
-      title: title || null,
-      content: content || null,
+      title,
+      content,
       images,
-      video: video || null,
-      link: link || null,
-      active: active !== undefined ? active === 'true' : true
+      video: savedVideo,
+      link,
+      active
     });
 
-    const savedBanner = await banner.save();
+    await banner.save();
+
     res.status(201).json({
-      message: '✅ Banner created successfully',
-      banner: savedBanner
+      message: 'Banner created successfully',
+      data: banner
     });
-
   } catch (err) {
-    res.status(400).json({ error: `❌ ${err.message}` });
-  }  res.status(500).json({ error: `❌ ${err.message}` });
- 
+    res.status(400).json({ error: err.message });
+  }
 };
 
 
