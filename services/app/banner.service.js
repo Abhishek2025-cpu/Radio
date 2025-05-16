@@ -1,4 +1,4 @@
-const AppBanner = require('../../models/app/banner.model');
+const AppBanner = require('../../models/mongo/AppBanner.model');
 
 exports.createBanner = async (data) => {
   const banner = new AppBanner(data);
