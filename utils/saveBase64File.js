@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const saveBase64File = require('../../utils/saveBase64File');
+
 
 function saveBase64File(base64Data, folder = 'uploads') {
   const matches = base64Data.match(/^data:(image|video)\/(\w+);base64,(.+)$/);
