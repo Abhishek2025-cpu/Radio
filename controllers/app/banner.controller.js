@@ -1,38 +1,37 @@
-const appBannerService = require('../../services/app/banner.service');
+const AppBanner = require('../../models/mongo/AppBanner.model');
 
 exports.createBanner = async (req, res) => {
   try {
     const {
-      type,
-      title,
-      content,
-      link,
-      video,
-      images // can be a single base64 string or an array of base64 strings
+      type, title, content, images, video, link, active
     } = req.body;
 
-    // Ensure images is an array
-    const imagesArray = typeof images === 'string' ? [images] : images;
-
-    const payload = {
+    const banner = new AppBanner({
       type,
       title: title || null,
       content: content || null,
-      link: link || null,
+      images: images ? images.split(',') : [], // base64 strings, comma-separated
       video: video || null,
-      images: imagesArray || [],
-    };
+      link: link || null,
+      active: active !== undefined ? active : true
+    });
 
-    const banner = await appBannerService.createBanner(payload);
+    const savedBanner = await banner.save();
     res.status(201).json({
-      success: true,
-      message: 'App banner created successfully',
-      data: banner
+      message: '✅ Banner created successfully',
+      banner: savedBanner
     });
+
   } catch (err) {
-    res.status(400).json({
-      success: false,
-      message: err.message
-    });
+    res.status(400).json({ error: `❌ ${err.message}` });
+  }
+};
+
+exports.getBanners = async (req, res) => {
+  try {
+    const banners = await AppBanner.find().sort({ createdAt: -1 });
+    res.json(banners);
+  } catch (err) {
+    res.status(500).json({ error: `❌ ${err.message}` });
   }
 };

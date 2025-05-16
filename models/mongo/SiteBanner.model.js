@@ -1,8 +1,16 @@
 const mongoose = require('mongoose');
 
 const siteBannerSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: ['hero-banner', 'popup-banner', 'info-strip'],
+    required: true
+  },
   title: String,
-  image: String,
+  content: String,
+  images: [String],
+  video: String,
+  link: String,
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });

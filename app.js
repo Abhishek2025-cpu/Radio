@@ -13,8 +13,8 @@ app.use(express.urlencoded({ extended: true }));
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 
-app.use('/api/site/banners', siteBannerRoutes);
-app.use('/api/app/banners', appBannerRoutes);
+app.use('/api/app', appBannerRoutes);
+app.use('/api/site', siteBannerRoutes);
 
 
 
