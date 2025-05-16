@@ -1,4 +1,10 @@
-const AppBanner = require('../../models/mongo/AppBanner.model');
+const AppBanner = require('../../models/app/banner.model');
 
-exports.createBanner = async (data) => new AppBanner(data).save();
-exports.getAllBanners = async () => AppBanner.find({ active: true });
+exports.createBanner = async (data) => {
+  const banner = new AppBanner(data);
+  return await banner.save();
+};
+
+exports.getAllBanners = async () => {
+  return await AppBanner.find().sort({ createdAt: -1 });
+};
