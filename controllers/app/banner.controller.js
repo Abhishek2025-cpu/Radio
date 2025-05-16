@@ -46,3 +46,39 @@ exports.getBanners = async (req, res) => {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
+
+
+// PUT /api/app/update-banner/:id
+exports.updateBanner = async (req, res) => {
+  try {
+    const banner = await AppBanner.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!banner) return res.status(404).json({ error: 'Banner not found' });
+    res.json({ message: 'Banner updated successfully', data: banner });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// PATCH /api/app/update-field/:id
+exports.updateBannerField = async (req, res) => {
+  try {
+    const banner = await AppBanner.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    if (!banner) return res.status(404).json({ error: 'Banner not found' });
+    res.json({ message: 'Field updated successfully', data: banner });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+
+// DELETE /api/app/delete-banner/:id
+exports.deleteBanner = async (req, res) => {
+  try {
+    const banner = await AppBanner.findByIdAndDelete(req.params.id);
+    if (!banner) return res.status(404).json({ error: 'Banner not found' });
+    res.json({ message: 'Banner deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
