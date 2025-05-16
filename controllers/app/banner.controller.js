@@ -1,19 +1,31 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');
 
+const AppBanner = require('../../models/mongo/AppBanner.model');
+
 exports.createBanner = async (req, res) => {
   try {
     const {
-      type, title, content, images, video, link, active
+      type, title, content, video, link, active
     } = req.body;
+
+    let images = [];
+
+    // Convert uploaded images to base64
+    if (req.files && req.files.length > 0) {
+      images = req.files.map(file => {
+        const base64 = file.buffer.toString('base64');
+        return `data:${file.mimetype};base64,${base64}`;
+      });
+    }
 
     const banner = new AppBanner({
       type,
       title: title || null,
       content: content || null,
-      images: images ? images.split(',') : [], // base64 strings, comma-separated
+      images,
       video: video || null,
       link: link || null,
-      active: active !== undefined ? active : true
+      active: active !== undefined ? active === 'true' : true
     });
 
     const savedBanner = await banner.save();
@@ -26,6 +38,7 @@ exports.createBanner = async (req, res) => {
     res.status(400).json({ error: `❌ ${err.message}` });
   }
 };
+
 
 exports.getBanners = async (req, res) => {
   try {
