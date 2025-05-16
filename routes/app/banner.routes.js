@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createBanner, getBanners } = require('../../controllers/app/banner.controller');
-const { uploadBannerMedia } = require('../../middleware/upload');
+const { uploadBannerMedia } = require('../../middlewares/upload');
 
 // Expecting multiple images under field name "images"
 router.post('/create-banner', uploadBannerMedia.array('images'), createBanner);
