@@ -1,17 +1,37 @@
 const SiteBanner = require('../../models/mongo/SiteBanner.model');
+const cloudinary = require('../../utils/cloudinary'); // adjust path as needed
 
 exports.createBanner = async (req, res) => {
   try {
-    const {
-      type, title, content, images, video, link, active
-    } = req.body;
+    const { type, title, content, link, active } = req.body;
+    let images = [];
+    let video = null;
+
+    // Upload images to Cloudinary
+    if (req.files && req.files.images) {
+      const imageFiles = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
+      for (const file of imageFiles) {
+        const result = await cloudinary.uploader.upload(file.path, { folder: 'banners/images' });
+        images.push(result.secure_url);
+      }
+    }
+
+    // Upload video to Cloudinary
+    if (req.files && req.files.video) {
+      const videoFile = Array.isArray(req.files.video) ? req.files.video[0] : req.files.video;
+      const result = await cloudinary.uploader.upload(videoFile.path, {
+        resource_type: 'video',
+        folder: 'banners/videos'
+      });
+      video = result.secure_url;
+    }
 
     const banner = new SiteBanner({
       type,
       title: title || null,
       content: content || null,
-      images: images ? images.split(',') : [],
-      video: video || null,
+      images,
+      video,
       link: link || null,
       active: active !== undefined ? active : true
     });
