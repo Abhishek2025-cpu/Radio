@@ -20,6 +20,6 @@ router.post(
 );
 
 // GET: Get all banners
-router.get('get-banners/', bannerController.getBanners);
+router.get('/get-banners', bannerController.getBanners);
 
 module.exports = router;
