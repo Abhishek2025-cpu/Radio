@@ -17,6 +17,8 @@ const appBannerRoutes = require('./routes/app/banner.routes');
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
+app.use('/api/form', require('./routes/app/FormSubmit'));
+
 
 
 
