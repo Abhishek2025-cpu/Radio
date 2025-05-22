@@ -31,3 +31,13 @@ exports.submitForm = async (req, res) => {
     res.status(400).json({ error: `❌ ${err.message}` });
   }
 };
+
+
+exports.getForms = async (req, res) => {
+  try {
+    const submissions = await FormSubmission.find().sort({ createdAt: -1 });
+    res.status(200).json({ data: submissions });
+  } catch (err) {
+    res.status(500).json({ error: `❌ ${err.message}` });
+  }
+};

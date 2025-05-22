@@ -14,4 +14,6 @@ router.post(
   formController.submitForm
 );
 
+router.get('/get-forms', formController.getForms);
+
 module.exports = router;
