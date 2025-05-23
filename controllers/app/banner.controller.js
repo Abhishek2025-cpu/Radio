@@ -1,7 +1,6 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
 const cloudinary = require('../../utils/cloudinary');
-console.log('req.files:', req.files);
-console.log('req.body:', req.body);
+
 
 exports.createBanner = async (req, res) => {
   try {
