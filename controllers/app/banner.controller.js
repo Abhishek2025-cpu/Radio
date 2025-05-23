@@ -1,20 +1,31 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
-const saveBase64File = require('../../utils/saveBase64File');
+const saveBase64File = require('../../utils/cloudinary');
 
 exports.createBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active, time, } = req.body;
+    const { type, title, content, link, active, time } = req.body;
 
     // Process uploaded files
     let images = [];
     let video = null;
 
+    // Upload images to Cloudinary
     if (req.files['images']) {
-      images = req.files['images'].map(file => file.path);
+      for (const file of req.files['images']) {
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: 'app-banners/images'
+        });
+        images.push(result.secure_url);
+      }
     }
 
+    // Upload video to Cloudinary
     if (req.files['video'] && req.files['video'][0]) {
-      video = req.files['video'][0].path;
+      const result = await cloudinary.uploader.upload(req.files['video'][0].path, {
+        resource_type: 'video',
+        folder: 'app-banners/videos'
+      });
+      video = result.secure_url;
     }
 
     const banner = new AppBanner({
@@ -24,7 +35,7 @@ exports.createBanner = async (req, res) => {
       images,
       video,
       link,
-       time,
+      time,
       active: active === 'true' || active === true
     });
 
@@ -40,10 +51,11 @@ exports.createBanner = async (req, res) => {
 };
 
 
+// GET /api/app/get-banners
 exports.getBanners = async (req, res) => {
   try {
     const banners = await AppBanner.find().sort({ createdAt: -1 });
-    res.json(banners);
+    res.status(200).json({ data: banners });
   } catch (err) {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
