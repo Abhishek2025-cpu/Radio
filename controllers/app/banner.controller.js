@@ -3,7 +3,7 @@ const saveBase64File = require('../../utils/saveBase64File');
 
 exports.createBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active } = req.body;
+    const { type, title, content, link, active, time, } = req.body;
 
     // Process uploaded files
     let images = [];
@@ -24,6 +24,7 @@ exports.createBanner = async (req, res) => {
       images,
       video,
       link,
+       time,
       active: active === 'true' || active === true
     });
 

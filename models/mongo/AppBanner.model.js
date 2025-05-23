@@ -11,6 +11,7 @@ const appBannerSchema = new mongoose.Schema({
   images: [String],
   video: String,
   link: String,
+  time: { type: String },
   active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
