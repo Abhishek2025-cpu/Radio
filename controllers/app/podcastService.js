@@ -32,6 +32,7 @@ const refreshCache = async () => {
       password: FTP_PASS,
       secure: false,
     });
+    console.log("[INFO] FTP access successful");
 
     client.trackProgress(info => {
       console.log("Transferred", info.name);
@@ -50,6 +51,7 @@ const refreshCache = async () => {
 
 
 const scanDirectory = async (client, path, category) => {
+    console.log(`[DEBUG] Scanning directory: ${path}`);
   const list = await client.list(path);
   if (!list || list.length === 0) {
     console.log(`[DEBUG] No files found in: ${path}`);
