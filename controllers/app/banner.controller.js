@@ -140,44 +140,25 @@ exports.updateBanner = async (req, res) => {
 
 
 // PATCH /api/app/update-field/:id
-exports.updateBannerField = async (req, res) => {
+// PATCH /api/app/toggle-active/:id
+exports.toggleBannerActive = async (req, res) => {
   try {
-    let updateData = req.body;
-
-    // If updating images or video via file upload
-    if (req.files && req.files['images']) {
-      let times = req.body.time;
-      if (!Array.isArray(times)) {
-        times = times ? [times] : [];
-      }
-      let images = [];
-      for (let i = 0; i < req.files['images'].length; i++) {
-        const file = req.files['images'][i];
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'app-banners/images'
-        });
-        images.push({
-          url: result.secure_url,
-          time: times[i] || null
-        });
-      }
-      updateData.images = images;
-    }
-    if (req.files && req.files['video'] && req.files['video'][0]) {
-      const result = await cloudinary.uploader.upload(req.files['video'][0].path, {
-        resource_type: 'video',
-        folder: 'app-banners/videos'
-      });
-      updateData.video = result.secure_url;
+    // expects { active: true } or { active: false } in req.body
+    if (typeof req.body.active === 'undefined') {
+      return res.status(400).json({ error: 'active field is required' });
     }
 
     const banner = await AppBanner.findByIdAndUpdate(
       req.params.id,
-      { $set: updateData },
+      { $set: { active: req.body.active } },
       { new: true }
     );
     if (!banner) return res.status(404).json({ error: 'Banner not found' });
-    res.json({ message: 'Field updated successfully', data: banner });
+
+    res.json({
+      message: `Banner is now ${banner.active ? 'active' : 'inactive'}`,
+      data: banner
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

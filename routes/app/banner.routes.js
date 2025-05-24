@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const {adminGetBanners, createBanner, getBanners,updateBanner,updateBannerField,deleteBanner } = require('../../controllers/app/banner.controller');
+const {adminGetBanners, createBanner, getBanners,updateBanner,toggleBannerActive,deleteBanner } = require('../../controllers/app/banner.controller');
 const multer = require('multer');
 
 
@@ -22,7 +22,7 @@ createBanner
 router.get('/get-banners', getBanners);
 router.get('/admin-get-banners', adminGetBanners); 
 router.put('/update-banner/:id', updateBanner);
-router.patch('/update-field/:id', updateBannerField);
+router.patch('/toggle-active/:id',toggleBannerActive);
 router.delete('/delete-banner/:id', deleteBanner);
 
 module.exports = router;
