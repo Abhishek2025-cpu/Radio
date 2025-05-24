@@ -14,7 +14,10 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
-
+const podcastService = require('./controllers/app/podcastService');
+app.get('/debug/podcasts', (req, res) => {
+  res.json({ files: podcastService.getAllFiles() });
+});
 // GET files by genre/category with pagination
 app.get("/api/podcasts", (req, res) => {
     const { category = "Unknown", page = 0, size = 10 } = req.query;
