@@ -58,10 +58,11 @@ exports.createBanner = async (req, res) => {
 
 // GET /api/app/get-banners
 // GET /api/app/get-banners
+// GET /api/app/get-banners
 exports.getBanners = async (req, res) => {
   try {
-    // Populate only the fields you want, here all fields including images with time
-    const banners = await AppBanner.find().sort({ createdAt: -1 }).select('-__v');
+    // Only fetch banners where active is true
+    const banners = await AppBanner.find({ active: true }).sort({ createdAt: -1 }).select('-__v');
     res.status(200).json({
       message: '✅ Banners fetched successfully',
       data: banners
