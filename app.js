@@ -36,6 +36,9 @@ app.get("/api/podcasts/all", (req, res) => {
     res.json({ total: files.length, files });
 });
 
+const radioRoutes = require('./routes/radio.routes');
+app.use('/api/radios', radioRoutes);
+
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
 app.use('/api/form', require('./routes/app/FormSubmit'));
