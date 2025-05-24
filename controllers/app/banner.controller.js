@@ -4,23 +4,28 @@ const cloudinary = require('../../utils/cloudinary');
 
 exports.createBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active, time } = req.body;
+    const { type, title, content, link, active } = req.body;
+    let times = req.body.time;
+    if (!Array.isArray(times)) {
+      // If only one time is sent, make it an array
+      times = times ? [times] : [];
+    }
 
-    // Process uploaded files
     let images = [];
-    let video = null;
-
-    // Upload images to Cloudinary
     if (req.files['images']) {
-      for (const file of req.files['images']) {
+      for (let i = 0; i < req.files['images'].length; i++) {
+        const file = req.files['images'][i];
         const result = await cloudinary.uploader.upload(file.path, {
           folder: 'app-banners/images'
         });
-        images.push(result.secure_url);
+        images.push({
+          url: result.secure_url,
+          time: times[i] || null // Assign corresponding time or null
+        });
       }
     }
 
-    // Upload video to Cloudinary
+    let video = null;
     if (req.files['video'] && req.files['video'][0]) {
       const result = await cloudinary.uploader.upload(req.files['video'][0].path, {
         resource_type: 'video',
@@ -36,7 +41,6 @@ exports.createBanner = async (req, res) => {
       images,
       video,
       link,
-      time,
       active: active === 'true' || active === true
     });
 
@@ -53,10 +57,15 @@ exports.createBanner = async (req, res) => {
 
 
 // GET /api/app/get-banners
+// GET /api/app/get-banners
 exports.getBanners = async (req, res) => {
   try {
-    const banners = await AppBanner.find().sort({ createdAt: -1 });
-    res.status(200).json({ data: banners });
+    // Populate only the fields you want, here all fields including images with time
+    const banners = await AppBanner.find().sort({ createdAt: -1 }).select('-__v');
+    res.status(200).json({
+      message: '✅ Banners fetched successfully',
+      data: banners
+    });
   } catch (err) {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
