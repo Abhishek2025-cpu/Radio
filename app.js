@@ -20,9 +20,14 @@ app.get('/debug/podcasts', (req, res) => {
 });
 // GET files by genre/category with pagination
 app.get("/api/podcasts", (req, res) => {
-    const { category = "Unknown", page = 0, size = 10 } = req.query;
-    const files = getFiles(category, parseInt(page), parseInt(size));
-    res.json({ category, page: +page, size: +size, count: files.length, files });
+    const { category, page = 0, size = 10 } = req.query;
+    let files;
+    if (category) {
+        files = getFiles(category, parseInt(page), parseInt(size));
+    } else {
+        files = getAllFiles().slice(page * size, (page + 1) * size);
+    }
+    res.json({ category: category || "all", page: +page, size: +size, count: files.length, files });
 });
 
 // GET all files
