@@ -56,12 +56,8 @@ exports.createBanner = async (req, res) => {
 };
 
 
-// GET /api/app/get-banners
-// GET /api/app/get-banners
-// GET /api/app/get-banners
 exports.getBanners = async (req, res) => {
   try {
-    // Only fetch banners where active is true
     const banners = await AppBanner.find({ active: true }).sort({ createdAt: -1 }).select('-__v');
     res.status(200).json({
       message: '✅ Banners fetched successfully',
@@ -71,6 +67,20 @@ exports.getBanners = async (req, res) => {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
+
+// GET /api/app/admin-get-banners
+exports.adminGetBanners = async (req, res) => {
+  try {
+    const banners = await AppBanner.find().sort({ createdAt: -1 }).select('-__v');
+    res.status(200).json({
+      message: '✅ Admin banners fetched successfully',
+      data: banners
+    });
+  } catch (err) {
+    res.status(500).json({ error: `❌ ${err.message}` });
+  }
+};
+
 
 
 // PUT /api/app/update-banner/:id
