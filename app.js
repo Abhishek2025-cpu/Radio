@@ -39,6 +39,7 @@ app.get("/api/podcasts/all", (req, res) => {
 
 const radioRoutes = require('./routes/radio.routes');
 app.use('/api', radioRoutes);
+app.use('/api', newsRoutes);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
