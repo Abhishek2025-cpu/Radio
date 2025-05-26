@@ -5,11 +5,11 @@ const multer = require('multer');
 const { storage } = require("../../utils/cloudinary");
 const upload = multer({ storage });
 
-router.post('/news', upload.fields([
+router.post('/add-news', upload.fields([
   { name: 'images', maxCount: 5 },
   { name: 'audio', maxCount: 1 }
 ]), createNews);
 
-router.get('/news', getAllNews);
+router.get('/get-news', getAllNews);
 
 module.exports = router; 
