@@ -23,7 +23,7 @@ exports.createNews = async (req, res) => {
     res.status(201).json({ message: 'News created successfully', news });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to create news' });
+    res.status(500).json({ error: 'Failed to create news', error: `❌ ${err.message}` });
   }
 };
 
