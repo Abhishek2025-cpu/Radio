@@ -4,11 +4,11 @@ exports.createNews = async (req, res) => {
   try {
     const { author, heading, paragraph, subParagraph } = req.body;
 
-    console.log('BODY:', req.body);
-    console.log('FILES:', req.files);
+    console.log('🟡 Request Body:', req.body);
+    console.log('🟡 Request Files:', req.files);
 
-    const images = req.files['images']?.map(file => file.url || file.path || file.filename) || [];
-    const audioUrl = req.files['audio']?.[0]?.url || req.files['audio']?.[0]?.path || req.files['audio']?.[0]?.filename || null;
+    const images = req.files?.images?.map(file => file.path || file.url || file.filename) || [];
+    const audioUrl = req.files?.audio?.[0]?.path || req.files?.audio?.[0]?.url || req.files?.audio?.[0]?.filename || null;
 
     const paragraphChunks = splitTextByCharLength(paragraph, 300);
     const subParagraphChunks = splitTextByCharLength(subParagraph, 300);
@@ -25,9 +25,14 @@ exports.createNews = async (req, res) => {
     res.status(201).json({ message: 'News created successfully', news });
   } catch (err) {
     console.error('❌ Error creating news:', err);
-    res.status(500).json({ error: 'Failed to create news', message: err.message });
+    res.status(500).json({ 
+      error: 'Failed to create news',
+      message: err.message,
+      stack: err.stack
+    });
   }
 };
+
 
 
 exports.getAllNews = async (req, res) => {
