@@ -41,7 +41,7 @@ const refreshCache = async () => {
     console.log("[INFO] Connected. Scanning...");
     cache.clear();
     await scanDirectory(client, BASE_PATH, "");
-    console.log("[INFO] Cache rebuilt. Total genres:", cache.size);
+   
   } catch (err) {
     console.error("FTP Error:", err);
   } finally {

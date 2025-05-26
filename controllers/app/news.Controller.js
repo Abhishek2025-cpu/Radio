@@ -1,19 +1,25 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
+
+
 exports.createNews = async (req, res) => {
   try {
+    console.log("📥 Received form data:", req.body);
+    console.log("📁 Uploaded files:", req.files);
+
     const { author, heading, paragraph, subParagraph } = req.body;
 
-    console.log('🟡 Request Body:', req.body);
-    console.log('🟡 Request Files:', req.files);
+    if (!heading || !paragraph || !author) {
+      return res.status(400).json({ error: "Missing required fields: heading, paragraph, or author." });
+    }
 
-    const images = req.files?.images?.map(file => file.path || file.url || file.filename) || [];
-    const audioUrl = req.files?.audio?.[0]?.path || req.files?.audio?.[0]?.url || req.files?.audio?.[0]?.filename || null;
+    const images = req.files?.images?.map(file => file.path) || [];
+    const audioUrl = req.files?.audio?.[0]?.path || null;
 
-    const paragraphChunks = splitTextByCharLength(paragraph, 300);
-    const subParagraphChunks = splitTextByCharLength(subParagraph, 300);
+    const paragraphChunks = splitTextByCharLength(paragraph);
+    const subParagraphChunks = splitTextByCharLength(subParagraph || '');
 
-    const news = await News.create({
+    const newNews = await News.create({
       images,
       author,
       heading,
@@ -22,13 +28,14 @@ exports.createNews = async (req, res) => {
       audioUrl
     });
 
-    res.status(201).json({ message: 'News created successfully', news });
-  } catch (err) {
-    console.error('❌ Error creating news:', err);
-    res.status(500).json({ 
-      error: 'Failed to create news',
-      message: err.message,
-      stack: err.stack
+    res.status(201).json({ message: "News created", data: newNews });
+
+  } catch (error) {
+    console.error("❌ Error in createNews:", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message,
+      stack: error.stack,
     });
   }
 };
