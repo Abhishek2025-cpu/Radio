@@ -14,7 +14,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
-const newsRoutes = require('./routes/app/new.routes');
+const newsRoutes = require('./routes/app/news.routes');
 const podcastService = require('./controllers/app/podcastService');
 app.get('/debug/podcasts', (req, res) => {
   res.json({ files: podcastService.getAllFiles() });
@@ -43,7 +43,6 @@ app.use('/api', radioRoutes);
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
 app.use('/api/form', require('./routes/app/FormSubmit'));
-app.use('/api', newsRoutes);
 
 
 
