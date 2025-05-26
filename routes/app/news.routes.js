@@ -11,3 +11,5 @@ router.post('/news', upload.fields([
 ]), createNews);
 
 router.get('/news', getAllNews);
+
+module.exports = router; 
