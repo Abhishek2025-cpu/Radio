@@ -5,9 +5,9 @@ const multer = require('multer');
 const { storage } = require("../../utils/cloudinary");
 const upload = multer({ storage });
 // Upload fields: multiple images and one audio file
-router.post('/add-news', upload.fields([
+router.post('/news', upload.fields([
   { name: 'images', maxCount: 5 },
   { name: 'audio', maxCount: 1 }
 ]), createNews);
 
-router.get('/get-news', getAllNews);
+router.get('/news', getAllNews);
