@@ -4,8 +4,8 @@ const splitTextByCharLength = require('../../utils/textSplitter');
 
 exports.createNews = async (req, res) => {
   try {
-    console.log("📥 Received form data:", req.body);
-    console.log("📁 Uploaded files:", req.files);
+    console.log("✅ BODY:", req.body);
+    console.log("✅ FILES:", req.files);
 
     const { author, heading, paragraph, subParagraph } = req.body;
 
@@ -16,17 +16,27 @@ exports.createNews = async (req, res) => {
     const images = req.files?.images?.map(file => file.path) || [];
     const audioUrl = req.files?.audio?.[0]?.path || null;
 
+    console.log("🖼️ Image URLs:", images);
+    console.log("🔊 Audio URL:", audioUrl);
+
     const paragraphChunks = splitTextByCharLength(paragraph);
     const subParagraphChunks = splitTextByCharLength(subParagraph || '');
 
-    const newNews = await News.create({
+    console.log("✂️ Paragraph Chunks:", paragraphChunks);
+    console.log("✂️ SubParagraph Chunks:", subParagraphChunks);
+
+    const dataToSave = {
       images,
       author,
       heading,
       paragraphChunks,
       subParagraphChunks,
       audioUrl
-    });
+    };
+
+    console.log("📦 Final Payload to Save:", dataToSave);
+
+    const newNews = await News.create(dataToSave);
 
     res.status(201).json({ message: "News created", data: newNews });
 
@@ -39,6 +49,7 @@ exports.createNews = async (req, res) => {
     });
   }
 };
+
 
 
 
