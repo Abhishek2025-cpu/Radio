@@ -65,20 +65,20 @@ app.get('/api/radios', async (req, res) => {
 
     if (metadata && config && config.result === 'success') {
       const data = config.data;
-      const currentTrack = metadata.timeline?.find((track) => track.artist && track.title) || {};
+ const currentTrack = metadata.timeline?.find(track => track.title || track.artist) || {};
 
-      results.push({
-        name: station.name,
-        title: currentTrack.title || metadata.title || '',
-        artist: currentTrack.artist || data.artist || '',
-        cover: currentTrack.cover || data.cover || '',
-        thumbnail: data.thumbnail || '',
-        station_url: data.stations?.[0]?.streams?.[0]?.url || '',
-        button_color: data.button_color || '',
-        date: currentTrack.date || null,
-        microtime: currentTrack.microtime || null,
-        duration: currentTrack.duration || null,
-      });
+     results.push({
+  name: station.name,
+  title: currentTrack.title || metadata.title || '',
+  artist: currentTrack.artist || metadata.artist || data.artist || '',
+  cover: currentTrack.cover || metadata.cover || data.cover || '',
+  thumbnail: data.thumbnail || '',
+  station_url: data.stations?.[0]?.streams?.[0]?.url || '',
+  button_color: data.button_color || '',
+  date: currentTrack.date || metadata.date || null,
+  microtime: currentTrack.microtime || metadata.microtime || null,
+  duration: currentTrack.duration || metadata.duration || null,
+});
     } else {
       results.push({
         name: station.name,
