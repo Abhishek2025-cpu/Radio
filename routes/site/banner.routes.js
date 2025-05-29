@@ -22,10 +22,10 @@ router.post(
 // GET: Get all banners
 router.get('/get-banners', bannerController.getBanners);
 // site.routes.js
-router.get('/admin-get-banners', siteController.adminGetBanners);
-router.put('/update-banner/:id', siteController.updateBanner);
-router.patch('/toggle-active/:id', siteController.toggleBannerActive);
-router.delete('/delete-banner/:id', siteController.deleteBanner);
+router.get('/admin-get-banners', bannerController.adminGetBanners);
+router.put('/update-banner/:id', bannerController.updateBanner);
+router.patch('/toggle-active/:id', bannerController.toggleBannerActive);
+router.delete('/delete-banner/:id', bannerController.deleteBanner);
 
 
 module.exports = router;
