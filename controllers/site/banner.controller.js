@@ -49,12 +49,13 @@ exports.createBanner = async (req, res) => {
 
 exports.getBanners = async (req, res) => {
   try {
-    const banners = await SiteBanner.find().sort({ createdAt: -1 });
+    const banners = await SiteBanner.find({ active: true }).sort({ createdAt: -1 });
     res.json(banners);
   } catch (err) {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
+
 
 exports.adminGetBanners = async (req, res) => {
   try {
