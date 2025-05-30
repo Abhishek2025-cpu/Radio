@@ -1,8 +1,13 @@
 const express = require('express');
 const cors = require('cors');
+const http = require("http");
 const app = express();
 require('dotenv').config();
 const connectDB = require('./config/db.mongo');
+const socket = require("./sockets/sockets");
+
+const server = http.createServer(app);
+const io = socket.init(server);
 connectDB();
 const { getFiles, getAllFiles } = require("./controllers/app/podcastService");
 
@@ -16,6 +21,22 @@ const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 const newsRoutes = require('./routes/app/news.routes');
 const podcastService = require('./controllers/app/podcastService');
+
+io.on("connection", (socket) => {
+  console.log("🟢 Client connected via socket");
+
+  socket.on("disconnect", () => {
+    console.log("🔴 Client disconnected");
+  });
+});
+
+
+
+
+
+
+
+
 app.get('/debug/podcasts', (req, res) => {
   res.json({ files: podcastService.getAllFiles() });
 });
