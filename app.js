@@ -5,6 +5,7 @@ const app = express();
 require('dotenv').config();
 const connectDB = require('./config/db.mongo');
 const socket = require("./sockets/sockets");
+const radioRoutes = require("./routes/app/radioStationRoutes");
 
 const server = http.createServer(app);
 const io = socket.init(server);
@@ -61,6 +62,7 @@ app.get("/api/podcasts/all", (req, res) => {
 const radioRoutes = require('./routes/radio.routes');
 app.use('/api', radioRoutes);
 app.use('/api/app', newsRoutes);
+app.use("/api/radio-stations", radioRoutes);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
