@@ -1,13 +1,17 @@
 const mongoose = require("mongoose");
 
-const RadioStationSchema = new mongoose.Schema({
-  VILLE: { type: String, required: true },
-  FREQUENCE: { type: Number, required: true },
+const radioStationSchema = new mongoose.Schema({
+  VILLE: String,
+  FREQUENCE: Number,
   GPS: {
-    LATITUDE: { type: Number, required: true },
-    LONGITUDE: { type: Number, required: true }
+    LATITUDE: Number,
+    LONGITUDE: Number,
   },
-  isActive: { type: Boolean, default: true }
+  isActive: {
+    type: Boolean,
+    default: true,
+  }
 });
 
-module.exports = mongoose.model("RadioStation", RadioStationSchema);
+// Use lowercase collection name "radioStation"
+module.exports = mongoose.model("RadioStation", radioStationSchema, "radioStation");
