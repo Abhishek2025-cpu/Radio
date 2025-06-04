@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const radioStationSchema = new mongoose.Schema({
+const RadioStationSchema = new mongoose.Schema({
   VILLE: { type: String, required: true },
   FREQUENCE: { type: Number, required: true },
   GPS: {
@@ -10,4 +10,4 @@ const radioStationSchema = new mongoose.Schema({
   isActive: { type: Boolean, default: true }
 });
 
-module.exports = mongoose.model("RadioStation", radioStationSchema);
+module.exports = mongoose.model("RadioStation", RadioStationSchema);
