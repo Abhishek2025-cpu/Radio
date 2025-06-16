@@ -2,7 +2,7 @@
 const ftp = require("basic-ftp");
 const dotenv = require("dotenv");
 const path = require("path");
-const Podcast = require("../models/mongo/Podcast"); // Adjust path as needed
+const Podcast = require("../../models/mongo/Podcast"); // Adjust path as needed
 
 dotenv.config();
 

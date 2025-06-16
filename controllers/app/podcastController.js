@@ -1,5 +1,5 @@
 // controllers/podcastController.js
-const Podcast = require('../../models/mongo/Podcast');
+const Podcast = require('../../models/mongo/Podcast');//podcats
 
 exports.createPodcast = async (req, res) => {
   try {
