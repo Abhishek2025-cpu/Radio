@@ -42,7 +42,7 @@ const stations = [
   },
 ];
 
-// Helper function to fetch data from a URL
+// Helper function to fetch a URL
 const fetchData = async (url) => {
   try {
     const response = await axios.get(url);
@@ -68,39 +68,40 @@ app.get('/api/radios', async (req, res) => {
       continue;
     }
 
-    console.log(`---- [${station.name}] metadata:`, metadata);
+    // Safely extract metadata
+    let title = 'Unknown Title';
+    let artist = 'Unknown Artist';
+    let cover = '';
+    let microtime = null;
+    let duration = null;
 
-    let track = {};
-    if (Array.isArray(metadata.timeline) && metadata.timeline.length > 0) {
-      const tl = metadata.timeline[0];
-      track = tl.current?.track || tl;
+    const track = metadata?.timeline?.[0]?.current?.track;
+
+    if (track) {
+      title = track.title || title;
+      artist = track.subtitle || artist;
+      cover = track.cover || cover;
+      microtime = track.microtime || microtime;
+      duration = track.duration || duration;
     }
-
-    const title = track.title || metadata.title || 'Unknown Title';
-    const artist = track.artist || metadata.artist || 'Unknown Artist';
-    const cover = track.cover || metadata.cover || config.data.cover || '';
-    const thumbnail = config.data.thumbnail || '';
-    const station_url = config.data.stations?.[0]?.streams?.[0]?.url || '';
-    const button_color = config.data.button_color || '';
-    const date = track.date || metadata.date || null;
-    const duration = track.duration || metadata.duration || null;
 
     results.push({
       name: station.name,
       title,
       artist,
       cover,
-      thumbnail,
-      station_url,
-      button_color,
-      date,
-      microtime: track.microtime || metadata.microtime || null,
+      thumbnail: config.data.thumbnail || '',
+      station_url: config.data.stations?.[0]?.streams?.[0]?.url || '',
+      button_color: config.data.button_color || '',
+      date: null, // Not present in API
+      microtime,
       duration,
     });
   }
 
   res.json({ result: 'success', data: results });
 });
+
 
 
 app.use('/api/podcasts', podcastRoutes);
