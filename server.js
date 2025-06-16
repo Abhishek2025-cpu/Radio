@@ -63,36 +63,45 @@ app.get('/api/radios', async (req, res) => {
       fetchData(station.configUrl),
     ]);
 
-    if (metadata && config && config.result === 'success') {
-      const data = config.data;
-const currentTrack = (metadata.timeline && metadata.timeline.length > 0)
-  ? metadata.timeline[0]
-  : {};
-
-results.push({
-  name: station.name,
-  title: currentTrack.title || metadata.title || 'Unknown Title',
-  artist: currentTrack.artist || metadata.artist || 'Unknown Artist',
-  cover: currentTrack.cover || metadata.cover || data.cover || '',
-  thumbnail: data.thumbnail || '',
-  station_url: data.stations?.[0]?.streams?.[0]?.url || '',
-  button_color: data.button_color || '',
-  date: currentTrack.date || metadata.date || null,
-  microtime: currentTrack.microtime || metadata.microtime || null,
-  duration: currentTrack.duration || metadata.duration || null,
-});
-
-
-    } else {
-      results.push({
-        name: station.name,
-        error: 'Failed to fetch metadata or config',
-      });
+    if (!metadata || !config || config.result !== 'success') {
+      results.push({ name: station.name, error: 'Fetch failed' });
+      continue;
     }
+
+    console.log(`---- [${station.name}] metadata:`, metadata);
+
+    let track = {};
+    if (Array.isArray(metadata.timeline) && metadata.timeline.length > 0) {
+      const tl = metadata.timeline[0];
+      track = tl.current?.track || tl;
+    }
+
+    const title = track.title || metadata.title || 'Unknown Title';
+    const artist = track.artist || metadata.artist || 'Unknown Artist';
+    const cover = track.cover || metadata.cover || config.data.cover || '';
+    const thumbnail = config.data.thumbnail || '';
+    const station_url = config.data.stations?.[0]?.streams?.[0]?.url || '';
+    const button_color = config.data.button_color || '';
+    const date = track.date || metadata.date || null;
+    const duration = track.duration || metadata.duration || null;
+
+    results.push({
+      name: station.name,
+      title,
+      artist,
+      cover,
+      thumbnail,
+      station_url,
+      button_color,
+      date,
+      microtime: track.microtime || metadata.microtime || null,
+      duration,
+    });
   }
 
   res.json({ result: 'success', data: results });
 });
+
 
 app.use('/api/podcasts', podcastRoutes);
 
