@@ -1,7 +1,7 @@
 // routes/podcastRoutes.js
 const express = require('express');
 const router = express.Router();
-const podcastController = require('../controllers/podcastController');
+const podcastController = require('../../controllers/app/podcastController');
 
 router.post('/add-podcast', podcastController.createPodcast);
 router.get('/get-podcast', podcastController.getAllPodcasts);
