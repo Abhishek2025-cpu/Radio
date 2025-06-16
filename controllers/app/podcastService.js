@@ -46,7 +46,7 @@ const refreshCache = async () => {
 };
 
 const scanDirectory = async (client, dirPath, category) => {
-  console.log(`[SCAN] Scanning directory: ${dirPath}`);
+  console.log(`[DEBUG] Scanning directory: ${dirPath}`);
   const list = await client.list(dirPath);
   if (!list || list.length === 0) return;
 
@@ -60,25 +60,22 @@ const scanDirectory = async (client, dirPath, category) => {
       const genre = parts.length >= 2 ? parts[parts.length - 2] : "Unknown";
       const subgenre = parts.length >= 1 ? parts[parts.length - 1] : "General";
 
+      // Construct raw URL
       const relativePath = `${dirPath}/${file.name}`;
-      const encodedUrl = `${BASE_URL}${relativePath}`.replace(/ /g, "%20");
-      const secureUrl = fixUrl(encodedUrl); // Just in case the old domain slips in
+      const rawUrl = `${BASE_URL}${relativePath}`.replace(/ /g, "%20");
+
+      // 🔥 Force correct domain
+      const finalUrl = rawUrl.replace("https://podcast.youradio.ma", "https://v2.uradio.ma");
 
       const timestamp = file.rawModifiedAt ? new Date(file.rawModifiedAt) : new Date();
 
-      // Update in-memory cache
+      // Store in memory cache
       if (!cache.has(genre)) cache.set(genre, []);
-      cache.get(genre).push({
-        url: secureUrl,
-        season,
-        genre,
-        subgenre,
-        timestamp,
-      });
+      cache.get(genre).push({ url: finalUrl, season, genre, subgenre, timestamp });
 
       // Sync to MongoDB
       await Podcast.updateOne(
-        { url: secureUrl },
+        { url: finalUrl }, // use final URL for uniqueness
         {
           $set: {
             season,
@@ -90,7 +87,7 @@ const scanDirectory = async (client, dirPath, category) => {
         { upsert: true }
       );
 
-      console.log(`[SYNCED] ${file.name} => ${genre}/${subgenre}`);
+      console.log(`[SYNCED] ${file.name} => ${finalUrl}`);
     }
   }
 };
