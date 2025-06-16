@@ -2,7 +2,7 @@ const app = require('./app');
 const connectMongo = require('./config/db.mongo');
 const express = require("express");
 const axios = require("axios");
-
+const podcastRoutes = require('./routes/podcastRoutes');
 
 const PORT = process.env.PORT || 2026;
 
@@ -90,7 +90,7 @@ results.push({
   res.json({ result: 'success', data: results });
 });
 
-
+app.use('/api/podcasts', podcastRoutes);
 
 
 

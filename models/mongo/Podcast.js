@@ -1,14 +1,17 @@
+// models/Podcast.js
 const mongoose = require('mongoose');
 
 const podcastSchema = new mongoose.Schema({
-  url: { type: String, required: true },        // mp3 URL (can be generated from FTP path)
-  season: { type: String, default: 'No Season' },
-  genre: { type: String, default: 'Unknown' },
-  subgenre: { type: String, default: 'General' },
-  timestamp: { type: Date, default: Date.now },
-  imageUrl: { type: String },                    // Cloudinary URL for podcast image
-});
+  url: { type: String, required: true, unique: true },
+  season: String,
+  genre: String,
+  subgenre: String,
+  timestamp: Date,
+  title: String,
+  description: String,
+  tags: [String],
+  duration: String,
+  imageUrl: String
+}, { timestamps: true });
 
-const Podcast = mongoose.model('Podcast', podcastSchema);
-
-module.exports = Podcast;
+module.exports = mongoose.model('Podcast', podcastSchema);
