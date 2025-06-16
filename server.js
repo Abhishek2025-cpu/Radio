@@ -42,18 +42,16 @@ const stations = [
   },
 ];
 
-// Helper function to fetch a URL
 const fetchData = async (url) => {
   try {
-    const response = await axios.get(url);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching URL ${url}:`, error.message);
+    const { data } = await axios.get(url);
+    return data;
+  } catch (err) {
+    console.error(`Error fetching ${url}:`, err.message);
     return null;
   }
 };
 
-// API endpoint to get consolidated radio metadata
 app.get('/api/radios', async (req, res) => {
   const results = [];
 
@@ -63,45 +61,34 @@ app.get('/api/radios', async (req, res) => {
       fetchData(station.configUrl),
     ]);
 
-    if (!metadata || !config || config.result !== 'success') {
-      results.push({ name: station.name, error: 'Fetch failed' });
+    if (!metadata?.timeline || !Array.isArray(metadata.timeline) ||
+        !config || config.result !== 'success') {
+      results.push({ name: station.name, error: 'Fetch failed or invalid structure' });
       continue;
     }
 
-    // Safely extract metadata
-    let title = 'Unknown Title';
-    let artist = 'Unknown Artist';
-    let cover = '';
-    let microtime = null;
-    let duration = null;
+    const trackInfo = metadata.timeline[0]?.current?.track;
 
-    const track = metadata?.timeline?.[0]?.current?.track;
-
-    if (track) {
-      title = track.title || title;
-      artist = track.subtitle || artist;
-      cover = track.cover || cover;
-      microtime = track.microtime || microtime;
-      duration = track.duration || duration;
+    if (!trackInfo) {
+      console.warn(`⚠️ No track info for ${station.name}:`, metadata.timeline[0]);
     }
 
     results.push({
       name: station.name,
-      title,
-      artist,
-      cover,
+      title: trackInfo?.title || 'Unknown Title',
+      artist: trackInfo?.subtitle || 'Unknown Artist',
+      cover: trackInfo?.cover || config.data.cover || '',
       thumbnail: config.data.thumbnail || '',
       station_url: config.data.stations?.[0]?.streams?.[0]?.url || '',
       button_color: config.data.button_color || '',
-      date: null, // Not present in API
-      microtime,
-      duration,
+      date: null,
+      microtime: trackInfo?.microtime || null,
+      duration: trackInfo?.duration || null,
     });
   }
 
   res.json({ result: 'success', data: results });
 });
-
 
 
 app.use('/api/podcasts', podcastRoutes);
