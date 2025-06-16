@@ -74,23 +74,44 @@ const scanDirectory = async (client, dirPath, category) => {
       cache.get(genre).push({ url: finalUrl, season, genre, subgenre, timestamp });
 
       // Sync to MongoDB
-      await Podcast.updateOne(
-        { url: finalUrl }, // use final URL for uniqueness
-        {
-          $set: {
-            season,
-            genre,
-            subgenre,
-            timestamp,
-          },
-        },
-        { upsert: true }
-      );
+   await Podcast.updateOne(
+  { url: { $in: [rawUrl, finalUrl] } }, // match both possible versions
+  {
+    $set: {
+      url: finalUrl, // force saving fixed URL
+      season,
+      genre,
+      subgenre,
+      timestamp,
+    },
+  },
+  { upsert: true }
+);
 
       console.log(`[SYNCED] ${file.name} => ${finalUrl}`);
     }
   }
 };
+
+(async () => {
+  const result = await Podcast.updateMany(
+    { url: { $regex: /^https:\/\/podcast\.youradio\.ma/ } },
+    [
+      {
+        $set: {
+          url: {
+            $replaceOne: {
+              input: "$url",
+              find: "https://podcast.youradio.ma",
+              replacement: "https://v2.uradio.ma"
+            }
+          }
+        }
+      }
+    ]
+  );
+  console.log("Fixed URLs:", result.modifiedCount);
+})();
 
 function getFiles(category, page = 0, size = 10) {
   const files = cache.get(category) || [];
