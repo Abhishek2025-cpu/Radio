@@ -61,29 +61,40 @@ app.get('/api/radios', async (req, res) => {
       fetchData(station.configUrl),
     ]);
 
-    if (!metadata?.timeline || !Array.isArray(metadata.timeline) ||
-        !config || config.result !== 'success') {
+    if (
+      !metadata?.success ||
+      !Array.isArray(metadata.data) ||
+      !config?.result === 'success' ||
+      !config.data
+    ) {
       results.push({ name: station.name, error: 'Fetch failed or invalid structure' });
       continue;
     }
 
-    const trackInfo = metadata.timeline[0]?.current?.track;
+    const configData = config.data;
+    const latestTrack = configData.timeline?.[1] || {};
+    const latestMeta = metadata.data?.[1] || {};
 
-    if (!trackInfo) {
-      console.warn(`⚠️ No track info for ${station.name}:`, metadata.timeline[0]);
+    // Some titles are "ARTIST - TITLE", so we split if needed
+    let title = latestTrack.artist || '';
+    let artist = latestTrack.title || '';
+    if (!title && !artist && latestMeta.title?.includes(' - ')) {
+      const parts = latestMeta.title.split(' - ');
+      artist = parts[0]?.trim();
+      title = parts[1]?.trim();
     }
 
     results.push({
       name: station.name,
-      title: trackInfo?.title || 'Unknown Title',
-      artist: trackInfo?.subtitle || 'Unknown Artist',
-      cover: trackInfo?.cover || config.data.cover || '',
-      thumbnail: config.data.thumbnail || '',
-      station_url: config.data.stations?.[0]?.streams?.[0]?.url || '',
-      button_color: config.data.button_color || '',
-      date: null,
-      microtime: trackInfo?.microtime || null,
-      duration: trackInfo?.duration || null,
+      title: title || 'Unknown Title',
+      artist: artist || 'Unknown Artist',
+      cover: latestMeta.cover || '',
+      thumbnail: configData.stations?.[0]?.thumbnail || '',
+      station_url: configData.stations?.[0]?.streams?.[0]?.url || '',
+      button_color: configData.button_color || '',
+      date: latestMeta.date || null,
+      microtime: latestMeta.microtime || null,
+      duration: latestMeta.duration || null,
     });
   }
 
