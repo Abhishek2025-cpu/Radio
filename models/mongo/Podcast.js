@@ -1,4 +1,3 @@
-// models/Podcast.js
 const mongoose = require('mongoose');
 
 const podcastSchema = new mongoose.Schema({
@@ -11,7 +10,8 @@ const podcastSchema = new mongoose.Schema({
   description: String,
   tags: [String],
   duration: String,
-  imageUrl: String
+  image: String,       // <-- NEW: for filename or identifier
+  imageUrl: String     // <-- Existing: for Cloudinary URL
 }, { timestamps: true });
 
 module.exports = mongoose.model('Podcast', podcastSchema);
