@@ -1,5 +1,5 @@
 const Podcast = require('../../models/mongo/Podcast');
-const { cloudinary } = require('../../utils/cloudinaryConfig'); // assuming config file is in utils
+const { cloudinary } = require('../../utils/cloudinary'); // assuming config file is in utils
 
 // Add Podcast with image upload (form-data)
 exports.createPodcast = async (req, res) => {
