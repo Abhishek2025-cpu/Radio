@@ -65,7 +65,10 @@ app.get('/api/radios', async (req, res) => {
 
     if (metadata && config && config.result === 'success') {
       const data = config.data;
-const currentTrack = metadata.timeline?.find((track) => track.artist || track.title) || {};
+const currentTrack = (metadata.timeline && metadata.timeline.length > 0)
+  ? metadata.timeline[0]
+  : {};
+
 results.push({
   name: station.name,
   title: currentTrack.title || metadata.title || 'Unknown Title',
@@ -78,6 +81,7 @@ results.push({
   microtime: currentTrack.microtime || metadata.microtime || null,
   duration: currentTrack.duration || metadata.duration || null,
 });
+
 
     } else {
       results.push({
