@@ -14,9 +14,9 @@ const BASE_PATH = "/podcasts";
 
 const cache = new Map();
 
-// Optional dynamic URL sanitizer (in case older entries use wrong domain)
+// Normalize and fix old domain
 const fixUrl = (url) => {
-  return url.replace("https://podcast.youradio.ma", "https://v2.uradio.ma");
+  return url.replace("https://podcast.youradio.ma", "https://v2.uradio.ma").replace(/ /g, "%20");
 };
 
 const refreshCache = async () => {
@@ -27,7 +27,7 @@ const refreshCache = async () => {
       host: FTP_HOST,
       user: FTP_USER,
       password: FTP_PASS,
-      secure: false, // true if your FTP supports FTPS
+      secure: false,
     });
     console.log("[INFO] FTP access successful");
 
@@ -60,12 +60,8 @@ const scanDirectory = async (client, dirPath, category) => {
       const genre = parts.length >= 2 ? parts[parts.length - 2] : "Unknown";
       const subgenre = parts.length >= 1 ? parts[parts.length - 1] : "General";
 
-      // Construct raw URL
       const relativePath = `${dirPath}/${file.name}`;
-      const rawUrl = `${BASE_URL}${relativePath}`.replace(/ /g, "%20");
-
-      // 🔥 Force correct domain
-      const finalUrl = rawUrl.replace("https://podcast.youradio.ma", "https://v2.uradio.ma");
+      const finalUrl = fixUrl(`${BASE_URL}${relativePath}`);
 
       const timestamp = file.rawModifiedAt ? new Date(file.rawModifiedAt) : new Date();
 
@@ -73,50 +69,57 @@ const scanDirectory = async (client, dirPath, category) => {
       if (!cache.has(genre)) cache.set(genre, []);
       cache.get(genre).push({ url: finalUrl, season, genre, subgenre, timestamp });
 
-      // Sync to MongoDB
-   await Podcast.updateOne(
-  { url: { $in: [rawUrl, finalUrl] } }, // match both possible versions
-  {
-    $set: {
-      url: finalUrl, // force saving fixed URL
-      season,
-      genre,
-      subgenre,
-      timestamp,
-    },
-  },
-  { upsert: true }
-);
-
-      console.log(`[SYNCED] ${file.name} => ${finalUrl}`);
+      // Sync to MongoDB safely
+      try {
+        await Podcast.findOneAndUpdate(
+          { url: finalUrl },
+          {
+            $set: { season, genre, subgenre, timestamp },
+            $setOnInsert: { url: finalUrl },
+          },
+          { upsert: true, new: true }
+        );
+        console.log(`[SYNCED] ${file.name} => ${finalUrl}`);
+      } catch (err) {
+        if (err.code === 11000) {
+          console.warn(`[DUPLICATE] Skipped existing podcast: ${finalUrl}`);
+        } else {
+          console.error("[DB ERROR]", err);
+        }
+      }
     }
   }
 };
 
+// One-time URL normalization script on boot
 (async () => {
-  const result = await Podcast.updateMany(
-    { url: { $regex: /^https:\/\/podcast\.youradio\.ma/ } },
-    [
-      {
-        $set: {
-          url: {
-            $replaceOne: {
-              input: "$url",
-              find: "https://podcast.youradio.ma",
-              replacement: "https://v2.uradio.ma"
+  try {
+    const result = await Podcast.updateMany(
+      { url: { $regex: /^https:\/\/podcast\.youradio\.ma/ } },
+      [
+        {
+          $set: {
+            url: {
+              $replaceOne: {
+                input: "$url",
+                find: "https://podcast.youradio.ma",
+                replacement: "https://v2.uradio.ma"
+              }
             }
           }
         }
-      }
-    ]
-  );
-  console.log("Fixed URLs:", result.modifiedCount);
+      ]
+    );
+    console.log("Fixed old podcast URLs:", result.modifiedCount);
+  } catch (err) {
+    console.error("[MIGRATION ERROR]", err);
+  }
 })();
 
 function getFiles(category, page = 0, size = 10) {
   const files = cache.get(category) || [];
   return files
-    .sort((a, b) => b.timestamp - a.timestamp) // latest first
+    .sort((a, b) => b.timestamp - a.timestamp)
     .slice(page * size, page * size + size);
 }
 
