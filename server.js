@@ -2,7 +2,7 @@ const app = require('./app');
 const connectMongo = require('./config/db.mongo');
 const express = require("express");
 const axios = require("axios");
-const podcastRoutes = require('./routes/app/PodcastRoutes');
+
 
 const PORT = process.env.PORT || 2026;
 
@@ -102,7 +102,6 @@ app.get('/api/radios', async (req, res) => {
 });
 
 
-app.use('/api/podcasts', podcastRoutes);
 
 
 
