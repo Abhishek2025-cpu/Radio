@@ -24,13 +24,22 @@ exports.getAllStations = async (req, res) => {
 // Update
 exports.updateStation = async (req, res) => {
   try {
-    const station = await RadioStation.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!station) return res.status(404).json({ error: "Station not found" });
-    res.json(station);
+    const station = await RadioStation.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    if (!station) {
+      return res.status(404).json({ error: "Station not found" });
+    }
+
+    res.status(201).json(station); // 201 for successful update (as per your request)
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 // Delete
 exports.deleteStation = async (req, res) => {
