@@ -36,15 +36,17 @@ exports.getLatestPodcasts = (_, res) => {
 
 // Add podcast
 exports.addPodcast = [
-  upload.single('coverImage'),
+  upload.single('coverImage'), // Expect "coverImage" field in form-data
   async (req, res) => {
     try {
       const { title, description, audioUrl, season, genre, subgenre } = req.body;
 
       let coverImageUrl = '';
       if (req.file) {
-        const result = await uploadToCloudinary(req.file.buffer);
+        const result = await uploadToCloudinary(req.file.buffer, 'podcasts/covers');
         coverImageUrl = result.secure_url;
+      } else {
+        return res.status(400).json({ error: 'Cover image is required' });
       }
 
       const podcast = new Podcast({
@@ -54,7 +56,7 @@ exports.addPodcast = [
         coverImageUrl,
         season,
         genre,
-        subgenre
+        subgenre,
       });
 
       const saved = await podcast.save();
@@ -70,6 +72,7 @@ exports.addPodcast = [
     }
   }
 ];
+
 
 // Update podcast
 exports.updatePodcast = [
