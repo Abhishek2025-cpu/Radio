@@ -1,17 +1,17 @@
 const mongoose = require('mongoose');
 
 const podcastSchema = new mongoose.Schema({
-  url: { type: String, required: true, unique: true },
+  title: String,
+  description: String,
+  coverImageUrl: String,
+  audioUrl: String,
   season: String,
   genre: String,
   subgenre: String,
-  timestamp: Date,
-  title: String,
-  description: String,
-  tags: [String],
-  duration: String,
-  image: String,       // <-- NEW: for filename or identifier
-  imageUrl: String     // <-- Existing: for Cloudinary URL
-}, { timestamps: true });
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
 module.exports = mongoose.model('Podcast', podcastSchema);
