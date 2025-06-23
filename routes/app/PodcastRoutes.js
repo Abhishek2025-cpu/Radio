@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/podcast.controller');
+const controller = require('../../controllers/app/podcastController');
 const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
