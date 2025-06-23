@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 const newsRoutes = require('./routes/app/news.routes');
-const podcastService = require('./controllers/app/podcastService');
+const podcast = require('./controllers/app/podcastController');
 
 io.on("connection", (socket) => {
   console.log("🟢 Client connected via socket");
@@ -38,31 +38,14 @@ io.on("connection", (socket) => {
 
 
 
-app.get('/debug/podcasts', (req, res) => {
-  res.json({ files: podcastService.getAllFiles() });
-});
-// GET files by genre/category with pagination
-app.get("/api/podcasts", (req, res) => {
-    const { category, page = 0, size = 10 } = req.query;
-    let files;
-    if (category) {
-        files = getFiles(category, parseInt(page), parseInt(size));
-    } else {
-        files = getAllFiles().slice(page * size, (page + 1) * size);
-    }
-    res.json({ category: category || "all", page: +page, size: +size, count: files.length, files });
-});
 
-// GET all files
-app.get("/api/podcasts/all", (req, res) => {
-    const files = getAllFiles();
-    res.json({ total: files.length, files });
-});
 
 const radioRoutes = require('./routes/radio.routes');
+const Podcast = require('./models/mongo/Podcast');
 app.use('/api', radioRoutes);
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
+app.use('/api',Podcast);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
