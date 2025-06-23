@@ -113,3 +113,16 @@ exports.deletePodcast = async (req, res) => {
 };
 
 
+
+// Initialize latestPodcastsCache from DB on server start
+const initializeCache = async () => {
+  try {
+    const latest = await Podcast.find().sort({ createdAt: -1 }).limit(10);
+    latestPodcastsCache = latest;
+    console.log(`✅ Latest podcast cache initialized with ${latest.length} entries`);
+  } catch (err) {
+    console.error('❌ Failed to initialize latest podcast cache', err);
+  }
+};
+
+initializeCache(); // Call immediately
