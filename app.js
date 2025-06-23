@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 const newsRoutes = require('./routes/app/news.routes');
-const podcast = require('./controllers/app/podcastController');
+const podcast = require('./routes/app/PodcastRoutes');
 
 io.on("connection", (socket) => {
   console.log("🟢 Client connected via socket");
@@ -41,7 +41,7 @@ io.on("connection", (socket) => {
 
 
 const radioRoutes = require('./routes/radio.routes');
-const Podcast = require('./models/mongo/Podcast');
+
 app.use('/api', radioRoutes);
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
