@@ -1,11 +1,9 @@
-const Podcast = require('../../models/mongo/Podcast');
 const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../config/cloudinary');
 const multer = require('multer');
 const streamifier = require('streamifier');
 
 const upload = multer({ storage: multer.memoryStorage() });
-let latestPodcastsCache = [];
 
 const uploadToCloudinary = (buffer, folder = 'podcasts/covers') => {
   return new Promise((resolve, reject) => {
@@ -21,42 +19,50 @@ exports.uploadGenreCover = [
   upload.single('coverImage'),
   async (req, res) => {
     try {
-      const genreName = req.params.genreName?.trim();
+      const { genreName } = req.params;
+
+      console.log('📥 Incoming upload for genre:', genreName);
 
       if (!genreName) {
         return res.status(400).json({ error: 'Genre name is required in URL param' });
       }
 
       if (!req.file) {
+        console.log('⚠️ No file uploaded');
         return res.status(400).json({ error: 'No coverImage file uploaded' });
       }
 
-      // Upload cover image to Cloudinary
+      console.log('📦 File received:', req.file.originalname, req.file.size + ' bytes');
+
       const result = await uploadToCloudinary(req.file.buffer);
+      console.log('✅ Cloudinary upload success:', result.secure_url);
+
       const coverImageUrl = result.secure_url;
 
-      // Save or update the genre cover image
       const genre = await Genre.findOneAndUpdate(
         { name: genreName },
         { name: genreName, coverImageUrl },
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
+      console.log('✅ Genre DB updated:', genre);
+
       res.status(200).json({
         message: 'Cover image uploaded successfully',
-        genre,
+        genre
       });
 
     } catch (err) {
-      console.error('Upload error:', err.message);
+      console.error('❌ Upload Error:', err.message);
+      console.error(err.stack);
       res.status(500).json({
         error: 'Upload failed',
-        message: err.message,
-        stack: err.stack,
+        details: err.message
       });
     }
   }
 ];
+
 
 // GET /api/podcasts
 exports.getAllPodcasts = async (_, res) => {

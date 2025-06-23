@@ -6,3 +6,6 @@ const GenreSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 module.exports = mongoose.model('Genre', GenreSchema);
+
+
+
