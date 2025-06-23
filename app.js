@@ -45,7 +45,7 @@ const Podcast = require('./models/mongo/Podcast');
 app.use('/api', radioRoutes);
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
-app.use('/api',Podcast);
+app.use('/api',podcast);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
