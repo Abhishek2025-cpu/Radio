@@ -1,11 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../../controllers/app/podcastController');
+const controller = require('../controllers/podcast.controller');
+const multer = require('multer');
 
-router.get('/podcast-all', controller.getAllPodcasts);
-router.get('/podcast-latest', controller.getLatestPodcasts);
-router.post('/add-podcast', controller.addPodcast);
-router.put('update-podcast/:id', controller.updatePodcast);
-router.delete('delete-podcast/:id', controller.deletePodcast);
+const upload = multer({ storage: multer.memoryStorage() });
+
+router.get('/podcasts-all', controller.getAllPodcasts);
+router.get('/podcasts-latest', controller.getLatestPodcasts);
+router.post('/add-podcasts', controller.addPodcast);
+router.put('/update-podcasts/:id', controller.updatePodcast);
+router.delete('/delete-podcasts/:id', controller.deletePodcast);
+
+// Genre cover upload
+router.post('/podcat/genres/:genreName/cover', upload.single('coverImage'), controller.uploadGenreCover);
 
 module.exports = router;

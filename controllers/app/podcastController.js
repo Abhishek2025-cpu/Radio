@@ -1,14 +1,12 @@
 const Podcast = require('../../models/mongo/Podcast');
+const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../config/cloudinary');
 const multer = require('multer');
 const streamifier = require('streamifier');
-// Caching latest 10 podcasts
+
+const upload = multer({ storage: multer.memoryStorage() });
 let latestPodcastsCache = [];
 
-// Multer in-memory
-const upload = multer({ storage: multer.memoryStorage() });
-
-// Utility: Upload buffer to Cloudinary
 const uploadToCloudinary = (buffer, folder = 'podcasts/covers') => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
@@ -19,8 +17,33 @@ const uploadToCloudinary = (buffer, folder = 'podcasts/covers') => {
   });
 };
 
-// Get all podcasts
-exports.getAllPodcasts = async (req, res) => {
+// POST /api/genres/:genreName/cover
+exports.uploadGenreCover = [
+  upload.single('coverImage'),
+  async (req, res) => {
+    try {
+      const { genreName } = req.params;
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+      const result = await uploadToCloudinary(req.file.buffer);
+      const coverImageUrl = result.secure_url;
+
+      const genre = await Genre.findOneAndUpdate(
+        { name: genreName },
+        { coverImageUrl },
+        { upsert: true, new: true }
+      );
+
+      res.json({ message: 'Cover image set', genre });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Upload failed' });
+    }
+  }
+];
+
+// GET /api/podcasts
+exports.getAllPodcasts = async (_, res) => {
   try {
     const podcasts = await Podcast.find().sort({ createdAt: -1 });
     res.json(podcasts);
@@ -29,91 +52,72 @@ exports.getAllPodcasts = async (req, res) => {
   }
 };
 
-// Get latest 10 from cache
-exports.getLatestPodcasts = (_, res) => {
+// GET /api/podcasts/latest
+exports.getLatestPodcasts = async (_, res) => {
   res.json(latestPodcastsCache);
 };
 
-// Add podcast
-exports.addPodcast = [
-  upload.single('coverImage'), // Expect "coverImage" field in form-data
-  async (req, res) => {
-    try {
-      const { title, description, audioUrl, season, genre, subgenre } = req.body;
+// POST /api/podcasts
+exports.addPodcast = async (req, res) => {
+  try {
+    const { title, description, audioUrl, season, genre, subgenre } = req.body;
 
-      let coverImageUrl = '';
-      if (req.file) {
-        const result = await uploadToCloudinary(req.file.buffer, 'podcasts/covers');
-        coverImageUrl = result.secure_url;
-      } else {
-        return res.status(400).json({ error: 'Cover image is required' });
-      }
+    if (!audioUrl) return res.status(400).json({ error: 'audioUrl is required' });
 
-      const podcast = new Podcast({
-        title,
-        description,
-        audioUrl,
-        coverImageUrl,
-        season,
-        genre,
-        subgenre,
-      });
+    const podcast = new Podcast({
+      title,
+      description,
+      audioUrl,
+      season,
+      genre,
+      subgenre
+    });
 
-      const saved = await podcast.save();
+    const saved = await podcast.save();
 
-      // Update cache
-      latestPodcastsCache.unshift(saved);
-      if (latestPodcastsCache.length > 10) latestPodcastsCache.pop();
+    // Update cache
+    latestPodcastsCache.unshift(saved);
+    if (latestPodcastsCache.length > 10) latestPodcastsCache.pop();
 
-      res.status(201).json(saved);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Podcast creation failed' });
-    }
+    res.status(201).json(saved);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Podcast creation failed' });
   }
-];
+};
 
+// PUT /api/podcasts/:id
+exports.updatePodcast = async (req, res) => {
+  try {
+    const { audioUrl, url, ...rest } = req.body;
 
-// Update podcast
-exports.updatePodcast = [
-  upload.single('coverImage'),
-  async (req, res) => {
-    try {
-      const update = { ...req.body };
+    const update = { ...rest };
+    if (audioUrl) update.audioUrl = audioUrl;
+    else if (url) update.audioUrl = url; // normalize
 
-      // If new cover image is sent
-      if (req.file) {
-        const result = await uploadToCloudinary(req.file.buffer);
-        update.coverImageUrl = result.secure_url;
-      }
+    const updated = await Podcast.findByIdAndUpdate(req.params.id, update, { new: true });
 
-      const updated = await Podcast.findByIdAndUpdate(req.params.id, update, { new: true });
+    const idx = latestPodcastsCache.findIndex(p => p._id.toString() === updated._id.toString());
+    if (idx !== -1) latestPodcastsCache[idx] = updated;
 
-      // Update cache
-      const idx = latestPodcastsCache.findIndex(p => p._id.toString() === updated._id.toString());
-      if (idx !== -1) latestPodcastsCache[idx] = updated;
-
-      res.json(updated);
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: 'Podcast update failed' });
-    }
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Update failed' });
   }
-];
+};
 
-// Delete podcast
+// DELETE /api/podcasts/:id
 exports.deletePodcast = async (req, res) => {
   try {
     const deleted = await Podcast.findByIdAndDelete(req.params.id);
-
-    // Remove from cache
     latestPodcastsCache = latestPodcastsCache.filter(p => p._id.toString() !== req.params.id);
-
-    res.json({ message: 'Podcast deleted', deleted });
+    res.json({ message: 'Deleted', deleted });
   } catch (err) {
     res.status(500).json({ error: 'Delete failed' });
   }
 };
+
 
 
 

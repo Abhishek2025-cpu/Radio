@@ -1,17 +1,12 @@
 const mongoose = require('mongoose');
 
-const podcastSchema = new mongoose.Schema({
+const PodcastSchema = new mongoose.Schema({
   title: String,
   description: String,
-  coverImageUrl: String,
-  audioUrl: String,
+  audioUrl: { type: String, required: true }, // unified
   season: String,
   genre: String,
   subgenre: String,
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
+}, { timestamps: true });
 
-module.exports = mongoose.model('Podcast', podcastSchema);
+module.exports = mongoose.model('Podcast', PodcastSchema);
