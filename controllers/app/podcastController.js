@@ -17,13 +17,15 @@ const uploadToCloudinary = (buffer, folder = 'podcasts/covers') => {
   });
 };
 
-// POST /api/genres/:genreName/cover
 exports.uploadGenreCover = [
   upload.single('coverImage'),
   async (req, res) => {
     try {
       const { genreName } = req.params;
-      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
 
       const result = await uploadToCloudinary(req.file.buffer);
       const coverImageUrl = result.secure_url;
@@ -34,9 +36,9 @@ exports.uploadGenreCover = [
         { upsert: true, new: true }
       );
 
-      res.json({ message: 'Cover image set', genre });
+      res.status(200).json({ message: 'Cover image uploaded successfully', genre });
     } catch (err) {
-      console.error(err);
+      console.error('Upload error:', err);
       res.status(500).json({ error: 'Upload failed' });
     }
   }
