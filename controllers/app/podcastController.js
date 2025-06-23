@@ -21,25 +21,39 @@ exports.uploadGenreCover = [
   upload.single('coverImage'),
   async (req, res) => {
     try {
-      const { genreName } = req.params;
+      const genreName = req.params.genreName?.trim();
 
-      if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+      if (!genreName) {
+        return res.status(400).json({ error: 'Genre name is required in URL param' });
       }
 
+      if (!req.file) {
+        return res.status(400).json({ error: 'No coverImage file uploaded' });
+      }
+
+      // Upload cover image to Cloudinary
       const result = await uploadToCloudinary(req.file.buffer);
       const coverImageUrl = result.secure_url;
 
+      // Save or update the genre cover image
       const genre = await Genre.findOneAndUpdate(
         { name: genreName },
-        { coverImageUrl },
-        { upsert: true, new: true }
+        { name: genreName, coverImageUrl },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      res.status(200).json({ message: 'Cover image uploaded successfully', genre });
+      res.status(200).json({
+        message: 'Cover image uploaded successfully',
+        genre,
+      });
+
     } catch (err) {
-      console.error('Upload error:', err);
-      res.status(500).json({ error: 'Upload failed' });
+      console.error('Upload error:', err.message);
+      res.status(500).json({
+        error: 'Upload failed',
+        message: err.message,
+        stack: err.stack,
+      });
     }
   }
 ];
