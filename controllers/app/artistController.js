@@ -1,6 +1,7 @@
 const Artist = require('../../models/mongo/Artist');
 const cloudinary = require('../../config/cloudinary');
 const ipaddr = require('ipaddr.js');
+const bcrypt = require('bcryptjs');
 
 
 // Utility: Stream upload to Cloudinary
@@ -138,17 +139,23 @@ exports.voteArtist = async (req, res) => {
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
 
-    // Filter out expired votes
+    // Filter out expired hashed IPs
     const now = new Date();
     artist.votedIPs = artist.votedIPs.filter(entry => now - new Date(entry.votedAt) < 24 * 60 * 60 * 1000);
 
-    const alreadyVoted = artist.votedIPs.some(entry => entry.ip === ip);
-    if (alreadyVoted) {
+    // Check if IP already voted (compare hash)
+    const alreadyVoted = await Promise.all(
+      artist.votedIPs.map(entry => bcrypt.compare(ip, entry.ipHash))
+    );
+
+    if (alreadyVoted.includes(true)) {
       return res.status(403).json({ message: 'You have already voted in the last 24 hours' });
     }
 
+    const ipHash = await bcrypt.hash(ip, 10);
+
     artist.votes += 1;
-    artist.votedIPs.push({ ip, votedAt: now });
+    artist.votedIPs.push({ ipHash, votedAt: now });
 
     await artist.save();
     res.status(200).json({ message: 'Vote registered', votes: artist.votes });
@@ -157,6 +164,8 @@ exports.voteArtist = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
 
 // controllers/app/artistController.js
 exports.partialUpdateArtist = async (req, res) => {

@@ -1,24 +1,26 @@
-// models/Artist.js
+const mongoose = require('mongoose');
+
 const artistSchema = new mongoose.Schema({
   name: String,
-  songName: String,
+  song: String,
   profileImage: String,
   votes: {
     type: Number,
-    default: 0
+    default: 0,
   },
-  // Each entry holds { ip: string, votedAt: Date }
   votedIPs: {
     type: [
       {
-        ip: String,
-        votedAt: Date
+        ipHash: String,
+        votedAt: Date,
       }
     ],
-    default: []
+    default: [],
   },
   isActive: {
     type: Boolean,
-    default: true
-  }
-});
+    default: true,
+  },
+}, { timestamps: true });
+
+module.exports = mongoose.model('Artist', artistSchema);
