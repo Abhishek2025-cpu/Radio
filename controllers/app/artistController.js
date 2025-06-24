@@ -1,10 +1,6 @@
 const Artist = require('../../models/mongo/Artist');
 const cloudinary = require('../../config/cloudinary');
 
-// controllers/app/artistController.js
-
-const Artist = require('../../models/artistModel');
-const cloudinary = require('../../utils/cloudinary'); // assumes config is exported here
 
 // Utility: Stream upload to Cloudinary
 const streamUpload = (buffer) => {
