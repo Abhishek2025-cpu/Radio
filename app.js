@@ -3,6 +3,8 @@ const cors = require('cors');
 const http = require("http");
 const app = express();
 require('dotenv').config();
+require('./cron/voteResetJob');
+
 const connectDB = require('./config/db.mongo');
 const socket = require("./sockets/sockets");
 const radioStationsRoutes = require("./routes/app/radioStationRoutes");

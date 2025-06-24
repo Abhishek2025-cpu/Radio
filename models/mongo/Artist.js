@@ -1,15 +1,24 @@
-const mongoose = require('mongoose');
-
+// models/Artist.js
 const artistSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  songName: { type: String, required: true },
-  profileImage: { type: String, required: true }, // URL to image
-  votes: { type: Number, default: 0 },
-  votedIPs: [{ type: String }], // store hashed or plain IPs for deduplication
-   isActive: {
+  name: String,
+  songName: String,
+  profileImage: String,
+  votes: {
+    type: Number,
+    default: 0
+  },
+  // Each entry holds { ip: string, votedAt: Date }
+  votedIPs: {
+    type: [
+      {
+        ip: String,
+        votedAt: Date
+      }
+    ],
+    default: []
+  },
+  isActive: {
     type: Boolean,
-    default: true // Artists are active by default
+    default: true
   }
-}, { timestamps: true });
-
-module.exports = mongoose.model('Artist', artistSchema);
+});

@@ -1,5 +1,6 @@
 const Artist = require('../../models/mongo/Artist');
 const cloudinary = require('../../config/cloudinary');
+const ipaddr = require('ipaddr.js');
 
 
 // Utility: Stream upload to Cloudinary
@@ -122,21 +123,36 @@ exports.deleteArtist = async (req, res) => {
 // Vote (IP-based)
 exports.voteArtist = async (req, res) => {
   try {
-    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const rawIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection.remoteAddress;
+    const ip = rawIp.replace('::ffff:', '');
+
+    if (!ipaddr.isValid(ip)) {
+      return res.status(400).json({ message: 'Invalid IP address' });
+    }
+
+    const parsedIp = ipaddr.parse(ip);
+    if (!parsedIp.range() || !['private', 'linkLocal', 'loopback'].includes(parsedIp.range())) {
+      return res.status(403).json({ message: 'Only private or local IPs are allowed' });
+    }
 
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
 
-    if (artist.votedIPs.includes(ip)) {
-      return res.status(403).json({ message: 'You have already voted' });
+    // Filter out expired votes
+    const now = new Date();
+    artist.votedIPs = artist.votedIPs.filter(entry => now - new Date(entry.votedAt) < 24 * 60 * 60 * 1000);
+
+    const alreadyVoted = artist.votedIPs.some(entry => entry.ip === ip);
+    if (alreadyVoted) {
+      return res.status(403).json({ message: 'You have already voted in the last 24 hours' });
     }
 
     artist.votes += 1;
-    artist.votedIPs.push(ip);
+    artist.votedIPs.push({ ip, votedAt: now });
 
     await artist.save();
-
     res.status(200).json({ message: 'Vote registered', votes: artist.votes });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
