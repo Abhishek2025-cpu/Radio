@@ -10,7 +10,7 @@ router.put('/update-artist/:id', upload.single('profileImage'), artistController
 router.get('/get-all-artists', artistController.getAllArtists);
 router.get('/get-artist/:id', artistController.getArtistById);
 
-router.patch('/active-artist/:id', artistController.partialUpdateArtist);
+
 router.delete('/delete-artist/:id', artistController.deleteArtist);
 
 // Voting
