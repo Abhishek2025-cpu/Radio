@@ -1,37 +1,56 @@
 const Artist = require('../../models/mongo/Artist');
 const cloudinary = require('../../config/cloudinary');
 
+// controllers/app/artistController.js
+
+const Artist = require('../../models/artistModel');
+const cloudinary = require('../../utils/cloudinary'); // assumes config is exported here
+
+// Utility: Stream upload to Cloudinary
+const streamUpload = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'artists/profiles' },
+      (error, result) => {
+        if (result) resolve(result);
+        else reject(error);
+      }
+    );
+    stream.end(buffer);
+  });
+};
+
 exports.createArtist = async (req, res) => {
   try {
     const { name, songName } = req.body;
+    let imageUrl = null;
 
-    let imageUrl = '';
+    if (!name || !songName) {
+      return res.status(400).json({ error: 'name and songName are required' });
+    }
+
     if (req.file) {
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: 'artists/profiles' },
-        (error, result) => {
-          if (error) throw error;
-          imageUrl = result.secure_url;
-          saveArtist();
-        }
-      );
-      result.end(req.file.buffer);
-    } else {
-      saveArtist();
+      const result = await streamUpload(req.file.buffer);
+      imageUrl = result.secure_url;
     }
 
-    async function saveArtist() {
-      const artist = await Artist.create({
-        name,
-        songName,
-        profileImage: imageUrl,
-      });
-      res.status(201).json(artist);
-    }
+    const artist = new Artist({
+      name,
+      songName,
+      profileImage: imageUrl,
+      votes: 0,
+      votedIPs: []
+    });
+
+    await artist.save();
+
+    res.status(201).json(artist);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error creating artist:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 exports.updateArtist = async (req, res) => {
