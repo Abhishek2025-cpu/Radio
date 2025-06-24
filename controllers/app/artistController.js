@@ -21,13 +21,25 @@ exports.createArtist = async (req, res) => {
     const { name, songName } = req.body;
     let imageUrl = null;
 
+    console.log('Incoming request:', {
+      name,
+      songName,
+      fileExists: !!req.file,
+    });
+
     if (!name || !songName) {
       return res.status(400).json({ error: 'name and songName are required' });
     }
 
     if (req.file) {
-      const result = await streamUpload(req.file.buffer);
-      imageUrl = result.secure_url;
+      try {
+        const result = await streamUpload(req.file.buffer);
+        console.log('Cloudinary upload result:', result);
+        imageUrl = result.secure_url;
+      } catch (uploadErr) {
+        console.error('Cloudinary upload failed:', uploadErr);
+        return res.status(500).json({ error: 'Image upload failed' });
+      }
     }
 
     const artist = new Artist({
@@ -35,17 +47,18 @@ exports.createArtist = async (req, res) => {
       songName,
       profileImage: imageUrl,
       votes: 0,
-      votedIPs: []
+      votedIPs: [],
     });
 
     await artist.save();
 
     res.status(201).json(artist);
   } catch (err) {
-    console.error('Error creating artist:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Create artist error:', err);
+    res.status(500).json({ error: 'Internal server error'});
   }
 };
+
 
 
 
