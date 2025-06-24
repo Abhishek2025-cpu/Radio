@@ -6,7 +6,7 @@ require('dotenv').config();
 const connectDB = require('./config/db.mongo');
 const socket = require("./sockets/sockets");
 const radioStationsRoutes = require("./routes/app/radioStationRoutes");
-
+const artistRoutes = require('./routes/app/artistRoutes');
 const server = http.createServer(app);
 const io = socket.init(server);
 connectDB();
@@ -50,6 +50,7 @@ app.use('/api',podcast);
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
 app.use('/api/form', require('./routes/app/FormSubmit'));
+app.use('/api/artists', artistRoutes);
 
 
 
