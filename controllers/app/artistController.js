@@ -141,3 +141,27 @@ exports.voteArtist = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// controllers/app/artistController.js
+exports.partialUpdateArtist = async (req, res) => {
+  try {
+    const { isActive } = req.body;
+
+    if (typeof isActive === 'undefined') {
+      return res.status(400).json({ message: 'isActive is required' });
+    }
+
+    const artist = await Artist.findByIdAndUpdate(
+      req.params.id,
+      { isActive },
+      { new: true }
+    );
+
+    if (!artist) return res.status(404).json({ message: 'Artist not found' });
+
+    res.status(200).json({ message: 'Artist status updated', artist });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+

@@ -7,6 +7,7 @@ const PodcastSchema = new mongoose.Schema({
   season: String,
   genre: String,
   subgenre: String,
+  
 }, { timestamps: true });
 
 module.exports = mongoose.model('Podcast', PodcastSchema);

@@ -15,5 +15,8 @@ router.delete('/delete-artist/:id', artistController.deleteArtist);
 
 // Voting
 router.post('/vote/:id', artistController.voteArtist);
+// routes/app/artistRoutes.js
+router.patch('/active-artist/:id', artistController.partialUpdateArtist);
+
 
 module.exports = router;
