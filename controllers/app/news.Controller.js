@@ -62,3 +62,66 @@ exports.getAllNews = async (req, res) => {
   }
 };
 
+exports.getSingleNews = async (req, res) => {
+  try {
+    const news = await News.findById(req.params.id);
+    if (!news) return res.status(404).json({ error: 'News not found' });
+    res.status(200).json(news);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
+};
+
+exports.updateNews = async (req, res) => {
+  try {
+    const { author, heading, paragraph, subParagraph } = req.body;
+
+    const images = req.files?.images?.map(file => file.path) || [];
+    const audioUrl = req.files?.audio?.[0]?.path;
+
+    const paragraphChunks = paragraph ? splitTextByCharLength(paragraph) : undefined;
+    const subParagraphChunks = subParagraph ? splitTextByCharLength(subParagraph) : undefined;
+
+    const updateData = {
+      ...(author && { author }),
+      ...(heading && { heading }),
+      ...(images.length > 0 && { images }),
+      ...(audioUrl && { audioUrl }),
+      ...(paragraphChunks && { paragraphChunks }),
+      ...(subParagraphChunks && { subParagraphChunks }),
+    };
+
+    const updated = await News.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+    if (!updated) return res.status(404).json({ error: 'News not found' });
+
+    res.status(200).json({ message: 'News updated', data: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update news' });
+  }
+};
+
+exports.toggleNewsVisibility = async (req, res) => {
+  try {
+    const news = await News.findById(req.params.id);
+    if (!news) return res.status(404).json({ error: 'News not found' });
+
+    news.visible = !news.visible;
+    await news.save();
+
+    res.status(200).json({ message: `News ${news.visible ? 'shown' : 'hidden'}`, data: news });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to toggle visibility' });
+  }
+};
+
+exports.deleteNews = async (req, res) => {
+  try {
+    const deleted = await News.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ error: 'News not found' });
+
+    res.status(200).json({ message: 'News deleted' });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete news' });
+  }
+};
