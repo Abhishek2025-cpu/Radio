@@ -114,8 +114,16 @@ exports.getArtistById = async (req, res) => {
 // Delete
 exports.deleteArtist = async (req, res) => {
   try {
-    await Artist.findByIdAndDelete(req.params.id);
-    res.status(204).send();
+    const deletedArtist = await Artist.findByIdAndDelete(req.params.id);
+
+    if (!deletedArtist) {
+      return res.status(404).json({ message: "Artist not found" });
+    }
+
+    res.status(200).json({
+      message: "Artist deleted successfully",
+      artist: deletedArtist,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
