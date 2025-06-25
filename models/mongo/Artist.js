@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const artistSchema = new mongoose.Schema({
   name: String,
-  song: String,
+  songName: String,
   profileImage: String,
   votes: {
     type: Number,
