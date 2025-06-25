@@ -1,5 +1,6 @@
 const FormSubmission = require('../../models/mongo/FormSubmission');
-const cloudinary = require('../../utils/cloudinary'); // adjust path if needed
+const { cloudinary } = require('../../utils/cloudinary');
+
 
 exports.submitForm = async (req, res) => {
   try {

@@ -7,7 +7,6 @@ cloudinary.config({
   api_secret: 'Pg4zI1EW8iCdotG29P4jcHFAW4s',
 });
 
-
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
@@ -15,7 +14,5 @@ const storage = new CloudinaryStorage({
     resource_type: file.mimetype.startsWith('audio') ? 'video' : 'image'
   }),
 });
-
-
 
 module.exports = { cloudinary, storage };
