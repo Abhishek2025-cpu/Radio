@@ -66,6 +66,8 @@ app.get('/api/radios', async (req, res) => {
   const results = [];
 
   for (const station of stations) {
+    const visible = stationVisibility[station.name]; // Get visibility
+
     const [metadata, config] = await Promise.all([
       fetchData(station.metadataUrl),
       fetchData(station.configUrl),
@@ -77,7 +79,7 @@ app.get('/api/radios', async (req, res) => {
       !config?.result === 'success' ||
       !config.data
     ) {
-      results.push({ name: station.name, error: 'Fetch failed or invalid structure' });
+      results.push({ name: station.name, visible, error: 'Fetch failed or invalid structure' });
       continue;
     }
 
@@ -85,7 +87,6 @@ app.get('/api/radios', async (req, res) => {
     const latestTrack = configData.timeline?.[1] || {};
     const latestMeta = metadata.data?.[1] || {};
 
-    // Some titles are "ARTIST - TITLE", so we split if needed
     let title = latestTrack.artist || '';
     let artist = latestTrack.title || '';
     if (!title && !artist && latestMeta.title?.includes(' - ')) {
@@ -105,11 +106,13 @@ app.get('/api/radios', async (req, res) => {
       date: latestMeta.date || null,
       microtime: latestMeta.microtime || null,
       duration: latestMeta.duration || null,
+      visible, // Add visibility here
     });
   }
 
   res.json({ result: 'success', data: results });
 });
+
 
 app.patch('/api/radios/visibility', (req, res) => {
   const { name, visible } = req.body;
