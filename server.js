@@ -9,6 +9,16 @@ const PORT = process.env.PORT || 2026;
 
 (async () => {
   await connectMongo();
+  const stationVisibility = {
+  U80: true,
+  U90: true,
+  UDANCE: true,
+  UPOP: true,
+  URADIO: true,
+  URBAN: true,
+};
+
+
 const stations = [
   {
     name: 'U80',
@@ -99,6 +109,21 @@ app.get('/api/radios', async (req, res) => {
   }
 
   res.json({ result: 'success', data: results });
+});
+
+app.patch('/api/radios/visibility', (req, res) => {
+  const { name, visible } = req.body;
+
+  if (typeof name !== 'string' || typeof visible !== 'boolean') {
+    return res.status(400).json({ error: 'Invalid input' });
+  }
+
+  if (!stationVisibility.hasOwnProperty(name)) {
+    return res.status(404).json({ error: 'Station not found' });
+  }
+
+  stationVisibility[name] = visible;
+  res.json({ message: `Visibility updated for ${name}`, visible });
 });
 
 
