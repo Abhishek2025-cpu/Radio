@@ -70,12 +70,15 @@ async function refreshCache() {
     const client = new ftp.Client();
     client.ftp.verbose = false;
     try {
-        await client.access({
-            host: FTP_HOST,
-            user: FTP_USER,
-            password: FTP_PASS,
-            secure: false
-        });
+      await client.access({
+  host: FTP_HOST,
+  user: FTP_USER,
+  password: FTP_PASS,
+  secure: false,
+  passive: true, // default is passive mode
+  timeout: 30000 // 30 seconds
+});
+
 
         cache.clear();
         for (const path of PODCAST_PATHS) {
