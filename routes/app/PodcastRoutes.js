@@ -196,5 +196,47 @@ router.get("/podcast/ftp-test", async (req, res) => {
   }
 });
 
+router.get("/podcast/ftp-test-deep", async (req, res) => {
+  const ftp = require("basic-ftp");
+  const client = new ftp.Client();
+  client.ftp.verbose = true;
+
+  try {
+    await client.access({
+      host: "ftp.yourserver.com",
+      user: "ftpuser",
+      password: "P@ssw0rd2022",
+      secure: false,
+      passive: true,
+      timeout: 15000,
+    });
+
+    // Try to find where the podcasts folder is
+    const roots = await client.list("/");
+    const results = [];
+
+    for (const entry of roots) {
+      if (entry.isDirectory) {
+        const inner = await client.list(entry.name);
+        results.push({
+          folder: entry.name,
+          contents: inner.map(i => i.name),
+        });
+      }
+    }
+
+    res.json(results);
+  } catch (err) {
+    console.error("FTP Deep Scan Error:", err);
+    res.status(500).json({
+      error: err.message,
+      details: err,
+    });
+  } finally {
+    client.close();
+  }
+});
+
+
 // ✅ Proper CommonJS export
 module.exports = router;
