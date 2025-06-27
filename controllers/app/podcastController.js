@@ -2,6 +2,9 @@ const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../config/cloudinary');
 const multer = require('multer');
 const streamifier = require('streamifier');
+const Podcast = require('../../models/mongo/Podcast'); // assuming correct path
+let latestPodcastsCache = []; // initialize as an empty array
+
 
 const upload = multer({ storage: multer.memoryStorage() });
 
