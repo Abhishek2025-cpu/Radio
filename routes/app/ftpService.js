@@ -1,7 +1,7 @@
 const FTP = require('basic-ftp');
 const path = require('path');
 require('dotenv').config();
-const { CronJob } = require('cron'); // ✅ Correct
+const { cron } = require('cron'); // ✅ Correct
 
 
 
