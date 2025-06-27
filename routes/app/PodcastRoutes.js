@@ -162,5 +162,39 @@ router.get('/podcast/all', (req, res) => {
     res.json(all);
 });
 
+
+router.get("/podcast/ftp-test", async (req, res) => {
+  const ftp = require("basic-ftp");
+  const client = new ftp.Client();
+  client.ftp.verbose = true; // detailed logs
+
+  try {
+    await client.access({
+      host: "ftp.yourserver.com",
+      user: "ftpuser",
+      password: "P@ssw0rd2022",
+      secure: false,      // ⚠️ Must match your server's config
+      passive: true,      // ⚠️ Required by Render
+      timeout: 15000,
+    });
+
+    const list = await client.list("/");
+    res.json({
+      success: true,
+      message: "FTP connection successful",
+      rootList: list.map(f => f.name),
+    });
+  } catch (err) {
+    console.error("FTP Connection Error:", err);
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      details: err,
+    });
+  } finally {
+    client.close();
+  }
+});
+
 // ✅ Proper CommonJS export
 module.exports = router;
