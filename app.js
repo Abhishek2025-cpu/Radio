@@ -43,11 +43,6 @@ io.on("connection", (socket) => {
 
 
 
-
-
-const radioRoutes = require('./routes/radio.routes');
-
-app.use('/api', radioRoutes);
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
 app.use('/api',podcast);
