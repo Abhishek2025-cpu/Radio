@@ -23,7 +23,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 const newsRoutes = require('./routes/app/news.routes');
-const podcast = require('./routes/app/PodcastRoutes');
+const podcastRoutes = require('./routes/app/PodcastRoutes');
 const radioRoutes = require('./routes/app/radio'); 
 app.use('/api', radioRoutes);
 
@@ -45,7 +45,7 @@ io.on("connection", (socket) => {
 
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
-app.use('/api',podcast);
+app.use('/podcast', podcastRoutes);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);

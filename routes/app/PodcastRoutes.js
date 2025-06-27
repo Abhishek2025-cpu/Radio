@@ -1,208 +1,42 @@
 const express = require('express');
-const ftp = require('basic-ftp');
-const cron = require('node-cron');
 const router = express.Router();
+const FTP = require('basic-ftp');
+const { PODCAST_PATHS, ftpConfig, BASE_URL } = require('./ftpService');
+const { getAllFiles, getFilesByGenre } = require('./ftpService');
 
-const BASE_URL = "https://podcast.youradio.ma";
-const FTP_HOST = process.env.FTP_HOST;
-const FTP_USER = process.env.FTP_USER;
-const FTP_PASS = process.env.FTP_PASS;
+router.get('/all', (req, res) => res.json(getAllFiles()));
 
-const PODCAST_PATHS = [
-      "/podcasts/L AFTER U/MOHAMED RAMADAN/",
-    "/podcasts/RAMADAN/LE BEFTOUR/ACH TARY/",
-    "/podcasts/RAMADAN/LE BEFTOUR/DOP AMINE/",
-    "/podcasts/RAMADAN/LE BEFTOUR/L'ACTU GAMING/",
-    "/podcasts/RAMADAN/LE BEFTOUR/L'INTEGRALE/",
-    "/podcasts/RAMADAN/LE BEFTOUR/LES 3 INFOS/",
-    "/podcasts/RAMADAN/LE BEFTOUR/STORY CHEFTEHA/",
-    "/podcasts/RAMADAN/LE BEFTOUR/WACH KANET FERASSEK/",
-    "/podcasts/U MORNING/ACH TARY/",
-    "/podcasts/U MORNING/COMEDY CHKOUN/",
-    "/podcasts/U MORNING/DOP AMINE/",
-    "/podcasts/U MORNING/INA ARTISTE DAREHA/",
-    "/podcasts/U MORNING/INSOLITE/",
-    "/podcasts/U MORNING/L'ACTU GAMING/",
-    "/podcasts/U MORNING/L'INTEGRALE/",
-    "/podcasts/U MORNING/LE9A SOUA2L/",
-    "/podcasts/U MORNING/LES 3 INFOS/",
-    "/podcasts/U MORNING/MAGHATEYE9CH/",
-    "/podcasts/U MORNING/MOUJAZ RIADI/",
-    "/podcasts/U MORNING/SONDAGE/",
-    "/podcasts/U MORNING/TOP & FLOP/",
-    "/podcasts/U MORNING/TRADEASY/",
-    "/podcasts/U MORNING/TROLL DU JOUR/",
-    "/podcasts/U MORNING/VRAI OU FAUX/",
-    "/podcasts/U MORNING/WACH KANET FERASSEK/"
-
-];
-
-const cache = new Map();
-
-async function scanFTPDirectory(client, path, categoryPath) {
-    const files = await client.list(path);
-    for (const file of files) {
-        if (file.isDirectory) {
-            await scanFTPDirectory(client, `${path}${file.name}/`, categoryPath ? `${categoryPath}/${file.name}` : file.name);
-        } else if (file.name.endsWith('.mp3')) {
-            const parts = categoryPath.split('/');
-            const season = parts.length === 3 ? parts[0] : "No Season";
-            const genre = parts.length >= 2 ? parts[parts.length - 2] : "Unknown";
-            const subgenre = parts.length >= 1 ? parts[parts.length - 1] : "General";
-
-            const fileUrl = `${BASE_URL}${path}${file.name}`.replace(/ /g, "%20");
-
-            const podcast = {
-                url: fileUrl,
-                season,
-                genre,
-                subgenre,
-                timestamp: new Date(file.rawModifiedAt || file.modifiedAt || Date.now())
-            };
-
-            if (!cache.has(genre)) cache.set(genre, []);
-            cache.get(genre).push(podcast);
-        }
-    }
-}
-
-async function refreshCache() {
-    const client = new ftp.Client();
-    client.ftp.verbose = false;
-    try {
-      await client.access({
-  host: FTP_HOST,
-  user: FTP_USER,
-  password: FTP_PASS,
-  secure: false,
-  passive: true, // default is passive mode
-  timeout: 30000 // 30 seconds
+router.get('/:category', (req, res) => {
+  const { category } = req.params;
+  const page = Number(req.query.page) || 0;
+  const size = Number(req.query.size) || 500;
+  res.json(getFilesByGenre(category, page, size));
 });
 
-
-        cache.clear();
-        for (const path of PODCAST_PATHS) {
-            await scanFTPDirectory(client, path, path.replace('/podcasts/', '').replace(/\/$/, ''));
-        }
-
-        console.log("Podcast cache refreshed");
-    } catch (err) {
-        console.error("Error during FTP scan:", err);
-    } finally {
-        client.close();
-    }
-}
-
-// Refresh every 17 minutes
-cron.schedule('*/17 * * * *', refreshCache);
-refreshCache(); // run once on startup
-
-// Routes
-router.get('/podcast/latest', async (req, res) => {
-  const client = new ftp.Client();
-  client.ftp.verbose = true; // enable debug output
-  
-  const latestList = [];
+router.get('/latest', async (req, res) => {
+  const client = new FTP.Client();
+  const latest = [];
 
   try {
-    await client.access({
-      host: FTP_HOST,
-      user: FTP_USER,
-      password: FTP_PASS,
-      secure: false
-    });
-    console.log('[LATEST] Connected to FTP server');
+    await client.access(ftpConfig);
 
-    for (const path of PODCAST_PATHS) {
-      console.log(`[LATEST] Listing path: ${path}`);
-      const files = await client.list(path);
-      console.log(`[LATEST] Found ${files.length} items in ${path}`);
-
-      const mp3Files = files.filter(f => f.name.endsWith('.mp3'));
-      console.log(`[LATEST] ${mp3Files.length} mp3 files in ${path}`);
-      
-      if (mp3Files.length) {
-        const latest = mp3Files.reduce((a, b) =>
-          (b.modifiedAt > a.modifiedAt ? b : a)
-        );
-        latestList.push({
-          name: latest.name,
-          url: `${BASE_URL}${path}${latest.name}`.replace(/ /g, "%20"),
-          modified: latest.modifiedAt
-        });
-        console.log(`[LATEST] Selected latest file: ${latest.name}`);
+    for (const ftpPath of PODCAST_PATHS) {
+      const list = await client.list(ftpPath);
+      const mp3s = list.filter(i => i.name.endsWith('.mp3'));
+      if (mp3s.length) {
+        const file = mp3s.sort((a, b) => b.modifiedAt - a.modifiedAt)[0];
+        const url = `${BASE_URL}${ftpPath}${file.name}`.replace(/ /g, '%20');
+        latest.push({ path: ftpPath, name: file.name, url });
       }
     }
 
-    res.json(latestList);
-
+    res.json(latest);
   } catch (err) {
-    console.error('[ERROR] /podcast/latest:', err);
-    res.status(500).json({ error: "Failed to fetch latest podcasts", details: err.message });
-  } finally {
-    client.close();
-  }
-});
-
-
-router.get('/podcast/:category', (req, res) => {
-    const { category } = req.params;
-    const page = parseInt(req.query.page) || 0;
-    const size = parseInt(req.query.size) || 500;
-
-    const data = cache.get(category) || [];
-    const sorted = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    const paginated = sorted.slice(page * size, (page + 1) * size);
-
-    res.json(paginated);
-});
-
-router.get('/podcast/all', (req, res) => {
-    const all = Array.from(cache.values()).flat();
-    res.json(all);
-});
-
-router.get("/podcast/ftp-debug", async (req, res) => {
-  const ftp = require("basic-ftp");
-  const client = new ftp.Client();
-  client.ftp.verbose = true;
-
-  try {
-    await client.access({
-      host: "ftp.yourserver.com",
-      user: "ftpuser",
-      password: "P@ssw0rd2022",
-      secure: false,
-      passive: true,
-    });
-
-    // Print current directory
-    const currentDir = await client.pwd();
-    console.log("Current FTP Directory:", currentDir);
-
-    // Try listing current directory
-    const currentList = await client.list();
-
-    // Try going one level up
-    await client.cd("..");
-    const parentDir = await client.pwd();
-    const parentList = await client.list();
-
-    res.json({
-      currentDir,
-      currentList: currentList.map(f => ({ name: f.name, type: f.type })),
-      parentDir,
-      parentList: parentList.map(f => ({ name: f.name, type: f.type })),
-    });
-  } catch (err) {
-    console.error("FTP debug error:", err);
+    console.error("fetch latest failed:", err);
     res.status(500).json({ error: err.message });
   } finally {
     client.close();
   }
 });
 
-
-
-// ✅ Proper CommonJS export
 module.exports = router;
