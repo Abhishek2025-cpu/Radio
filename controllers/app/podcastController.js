@@ -1,6 +1,7 @@
 const express = require('express');
 const ftp = require('basic-ftp');
 const cron = require('node-cron');
+const router = express.Router();
 
 const app = express();
 app.use(require('cors')({ origin: 'http://localhost' }));
@@ -146,5 +147,4 @@ app.get('/podcast/all', (req, res) => {
     res.json(all);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+export default router;
