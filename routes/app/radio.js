@@ -1,6 +1,5 @@
 const express = require('express');
 const axios = require('axios');
-
 const router = express.Router();
 
 const stations = [
@@ -35,10 +34,15 @@ router.get('/station-metadata', async (req, res) => {
     const results = await Promise.all(
       stations.map(async (station) => {
         try {
-          const response = await axios.get(station.metadataUrl);
+          const { data } = await axios.get(station.metadataUrl);
 
-          const metadata = Array.isArray(response.data)
-            ? response.data.filter((item, index) => index % 2 === 0 && item.title && item.title.trim() !== '-')
+          // Check if data is an array and filter every alternate entry
+          const metadata = Array.isArray(data)
+            ? data.filter((entry, index) =>
+                index % 2 === 0 &&
+                entry?.title?.trim() &&
+                entry.title.trim() !== '-'
+              )
             : [];
 
           return {
@@ -57,7 +61,10 @@ router.get('/station-metadata', async (req, res) => {
 
     res.json({ stations: results });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch station metadata', details: err.message });
+    res.status(500).json({
+      error: 'Failed to fetch station metadata',
+      details: err.message
+    });
   }
 });
 
