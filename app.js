@@ -24,6 +24,9 @@ const siteBannerRoutes = require('./routes/site/banner.routes');
 const appBannerRoutes = require('./routes/app/banner.routes');
 const newsRoutes = require('./routes/app/news.routes');
 const podcast = require('./routes/app/PodcastRoutes');
+const radioRoutes = require('./routes/app/radio'); 
+app.use('/api', radioRoutes);
+
 
 io.on("connection", (socket) => {
   console.log("🟢 Client connected via socket");
