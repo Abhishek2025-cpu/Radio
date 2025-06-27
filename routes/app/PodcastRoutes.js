@@ -162,76 +162,29 @@ router.get('/podcast/all', (req, res) => {
     res.json(all);
 });
 
-
-router.get("/podcast/ftp-test", async (req, res) => {
-  const ftp = require("basic-ftp");
-  const client = new ftp.Client();
-  client.ftp.verbose = true; // detailed logs
-
-  try {
-    await client.access({
-      host: "ftp.yourserver.com",
-      user: "ftpuser",
-      password: "P@ssw0rd2022",
-      secure: false,      // ⚠️ Must match your server's config
-      passive: true,      // ⚠️ Required by Render
-      timeout: 15000,
-    });
-
-    const list = await client.list("/");
-    res.json({
-      success: true,
-      message: "FTP connection successful",
-      rootList: list.map(f => f.name),
-    });
-  } catch (err) {
-    console.error("FTP Connection Error:", err);
-    res.status(500).json({
-      success: false,
-      error: err.message,
-      details: err,
-    });
-  } finally {
-    client.close();
-  }
-});
-
-router.get("/podcast/ftp-test-deep", async (req, res) => {
+router.get("/podcast/ftp-list-podcasts", async (req, res) => {
   const ftp = require("basic-ftp");
   const client = new ftp.Client();
   client.ftp.verbose = true;
 
   try {
     await client.access({
-      host: "ftp.yourserver.com",
+      host: "ftp.yourserver.com", // change if needed
       user: "ftpuser",
       password: "P@ssw0rd2022",
       secure: false,
       passive: true,
-      timeout: 15000,
     });
 
-    // Try to find where the podcasts folder is
-    const roots = await client.list("/");
-    const results = [];
-
-    for (const entry of roots) {
-      if (entry.isDirectory) {
-        const inner = await client.list(entry.name);
-        results.push({
-          folder: entry.name,
-          contents: inner.map(i => i.name),
-        });
-      }
-    }
-
-    res.json(results);
+    // Try listing /podcasts directly
+    const list = await client.list("/podcasts");
+    res.json({
+      directory: "/podcasts",
+      contents: list.map(file => ({ name: file.name, type: file.type })),
+    });
   } catch (err) {
-    console.error("FTP Deep Scan Error:", err);
-    res.status(500).json({
-      error: err.message,
-      details: err,
-    });
+    console.error("FTP list error:", err);
+    res.status(500).json({ error: err.message });
   } finally {
     client.close();
   }
