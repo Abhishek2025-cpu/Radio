@@ -17,26 +17,33 @@ const stations = [
 router.get('/stations', async (req, res) => {
   try {
     const results = await Promise.all(
-      stations.map(async (station) => {
+      stations.map(async ({ name, url }) => {
         try {
-          const response = await axios.get(station.url, { httpsAgent: agent });
+          const response = await axios.get(url, { httpsAgent: agent });
           const data = response.data;
 
-          const metadata = Array.isArray(data)
-            ? data.filter(item => item.title && item.title !== '-')
-            : [];
+          let metadata = [];
 
-          return { name: station.name, metadata };
+          // Ensure data is an array
+          if (Array.isArray(data)) {
+            metadata = data.filter(item => item && item.title && item.title !== '-');
+          } else if (typeof data === 'object' && data !== null) {
+            // In case it's a single object, wrap it in an array
+            metadata = [data];
+          }
+
+          return { name, metadata };
         } catch (err) {
-          console.error(`Fetch error for ${station.name}: ${err.message}`);
-          return { name: station.name, metadata: [] };
+          console.error(`Fetch error for ${name}: ${err.message}`);
+          return { name, metadata: [] };
         }
       })
     );
 
     res.json({ stations: results });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Unexpected error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
