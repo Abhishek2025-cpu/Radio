@@ -96,38 +96,51 @@ refreshCache(); // run once on startup
 
 // Routes
 router.get('/podcast/latest', async (req, res) => {
-    const client = new ftp.Client();
-    const latestList = [];
+  const client = new ftp.Client();
+  client.ftp.verbose = true; // enable debug output
+  
+  const latestList = [];
 
-    try {
-        await client.access({
-            host: FTP_HOST,
-            user: FTP_USER,
-            password: FTP_PASS,
-            secure: false
+  try {
+    await client.access({
+      host: FTP_HOST,
+      user: FTP_USER,
+      password: FTP_PASS,
+      secure: false
+    });
+    console.log('[LATEST] Connected to FTP server');
+
+    for (const path of PODCAST_PATHS) {
+      console.log(`[LATEST] Listing path: ${path}`);
+      const files = await client.list(path);
+      console.log(`[LATEST] Found ${files.length} items in ${path}`);
+
+      const mp3Files = files.filter(f => f.name.endsWith('.mp3'));
+      console.log(`[LATEST] ${mp3Files.length} mp3 files in ${path}`);
+      
+      if (mp3Files.length) {
+        const latest = mp3Files.reduce((a, b) =>
+          (b.modifiedAt > a.modifiedAt ? b : a)
+        );
+        latestList.push({
+          name: latest.name,
+          url: `${BASE_URL}${path}${latest.name}`.replace(/ /g, "%20"),
+          modified: latest.modifiedAt
         });
-
-        for (const path of PODCAST_PATHS) {
-            const files = await client.list(path);
-            const mp3Files = files.filter(f => f.name.endsWith('.mp3'));
-            if (mp3Files.length > 0) {
-                const latest = mp3Files.sort((a, b) => b.modifiedAt - a.modifiedAt)[0];
-                latestList.push({
-                    name: latest.name,
-                    url: `${BASE_URL}${path}${latest.name}`.replace(/ /g, "%20"),
-                    modified: latest.modifiedAt
-                });
-            }
-        }
-
-        res.json(latestList);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Failed to fetch latest podcasts" });
-    } finally {
-        client.close();
+        console.log(`[LATEST] Selected latest file: ${latest.name}`);
+      }
     }
+
+    res.json(latestList);
+
+  } catch (err) {
+    console.error('[ERROR] /podcast/latest:', err);
+    res.status(500).json({ error: "Failed to fetch latest podcasts", details: err.message });
+  } finally {
+    client.close();
+  }
 });
+
 
 router.get('/podcast/:category', (req, res) => {
     const { category } = req.params;
