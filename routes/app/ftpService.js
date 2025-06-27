@@ -1,14 +1,14 @@
 const FTP = require('basic-ftp');
 const path = require('path');
 require('dotenv').config();
-const { cron } = require('cron'); // ✅ Correct
+const { CronJob } = require('cron'); 
 
 
 
 const PODCAST_PATHS = [
   "/podcasts/L AFTER U/MOHAMED RAMADAN/",
   "/podcasts/RAMADAN/LE BEFTOUR/ACH TARY/",
-  // ... include all paths here
+
   "/podcasts/U MORNING/WACH KANET FERASSEK/"
 ];
 
@@ -84,8 +84,8 @@ function getFilesByGenre(genre, page=0, size=500) {
     .slice(page * size, (page + 1) * size);
 }
 
-
-new cron.CronJob('*/10 * * * * *', refreshCache).start(); // refresh every 10s
+new CronJob('*/10 * * * * *', refreshCache).start(); 
 refreshCache();
+
 
 module.exports = { getAllFiles, getFilesByGenre, refreshCache, PODCAST_PATHS, ftpConfig, BASE_URL };
