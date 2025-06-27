@@ -1,59 +1,39 @@
-const express = require('express');
-const axios = require('axios');
-
+// routes/radio.js
+const express = require("express");
+const axios = require("axios");
 const router = express.Router();
 
 const stations = [
-  {
-    name: 'U80',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8220/metadata-all-cover'
-  },
-  {
-    name: 'U90',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8221/metadata-all-cover'
-  },
-  {
-    name: 'UDANCE',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8200/metadata-all-cover'
-  },
-  {
-    name: 'UPOP',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8222/metadata-all-cover'
-  },
-  {
-    name: 'URADIO',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8113/metadata-all-cover'
-  },
-  {
-    name: 'URBAN',
-    metadataUrl: 'https://metadata.infomaniak.com/api/radio/8173/metadata-all-cover'
-  },
+  { name: "U80", id: 8220 },
+  { name: "U90", id: 8219 },
+  { name: "UDANCE", id: 8218 },
+  { name: "UPOP", id: 8217 },
+  { name: "URADIO", id: 8216 },
+  { name: "URBAN", id: 8215 },
 ];
 
-// API to get filtered metadata for all stations
-router.get('/radio-metadata', async (req, res) => {
+router.get("/all-metadata", async (req, res) => {
   try {
     const results = await Promise.all(
       stations.map(async (station) => {
         try {
-          const { data } = await axios.get(station.metadataUrl);
-
-          const metadataArray = Array.isArray(data)
-            ? data
-            : Array.isArray(data.metadata)
-              ? data.metadata
-              : [];
-
-          const filteredMetadata = metadataArray.filter((entry, index) =>
-            index % 2 === 0 &&
-            entry.title &&
-            entry.title.trim() !== '-' &&
-            entry.title.trim() !== ''
+          const { data } = await axios.get(
+            `https://metadata.infomaniak.com/api/radio/${station.id}/metadata-all-cover`
           );
+
+          // Log the raw data structure once
+          console.log(`Raw response for ${station.name}:`, JSON.stringify(data, null, 2));
+
+          // Confirm it's an array before filtering
+          const filtered =
+            Array.isArray(data) &&
+            data.filter(
+              (entry) => entry.title && entry.title.trim() !== "-"
+            );
 
           return {
             name: station.name,
-            metadata: filteredMetadata,
+            metadata: filtered || [],
           };
         } catch (err) {
           console.error(`Error fetching metadata for ${station.name}:`, err.message);
@@ -66,14 +46,10 @@ router.get('/radio-metadata', async (req, res) => {
     );
 
     res.json({ stations: results });
-  } catch (error) {
-    console.error('Failed to fetch station metadata:', error.message);
-    res.status(500).json({
-      error: 'Failed to fetch station metadata',
-      details: error.message,
-    });
+  } catch (err) {
+    console.error("Critical failure in all-metadata route:", err.message);
+    res.status(500).json({ error: "Failed to fetch metadata." });
   }
 });
 
 module.exports = router;
-
