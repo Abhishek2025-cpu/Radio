@@ -19,20 +19,24 @@ router.get('/stations', async (req, res) => {
     const results = await Promise.all(
       stations.map(async (station) => {
         try {
-          const { data } = await axios.get(station.url, { httpsAgent: agent });
+          const response = await axios.get(station.url, { httpsAgent: agent });
+          const data = response.data;
+
           const metadata = Array.isArray(data)
-            ? data.filter((item, index) => index % 2 === 0 && item.title?.trim() !== '-')
+            ? data.filter(item => item.title && item.title !== '-')
             : [];
+
           return { name: station.name, metadata };
         } catch (err) {
-          console.error(`Failed to fetch ${station.name}: ${err.message}`);
+          console.error(`Fetch error for ${station.name}: ${err.message}`);
           return { name: station.name, metadata: [] };
         }
       })
     );
+
     res.json({ stations: results });
   } catch (err) {
-    res.status(500).json({ error: 'Unexpected server error', message: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
