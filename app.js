@@ -45,7 +45,7 @@ io.on("connection", (socket) => {
 
 app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
-app.use('/podcast', podcastRoutes);
+app.use('api/podcast', podcastRoutes);
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
