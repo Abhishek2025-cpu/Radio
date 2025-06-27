@@ -162,33 +162,46 @@ router.get('/podcast/all', (req, res) => {
     res.json(all);
 });
 
-router.get("/podcast/ftp-list-podcasts", async (req, res) => {
+router.get("/podcast/ftp-debug", async (req, res) => {
   const ftp = require("basic-ftp");
   const client = new ftp.Client();
   client.ftp.verbose = true;
 
   try {
     await client.access({
-      host: "ftp.yourserver.com", // change if needed
+      host: "ftp.yourserver.com",
       user: "ftpuser",
       password: "P@ssw0rd2022",
       secure: false,
       passive: true,
     });
 
-    // Try listing /podcasts directly
-    const list = await client.list("/podcasts");
+    // Print current directory
+    const currentDir = await client.pwd();
+    console.log("Current FTP Directory:", currentDir);
+
+    // Try listing current directory
+    const currentList = await client.list();
+
+    // Try going one level up
+    await client.cd("..");
+    const parentDir = await client.pwd();
+    const parentList = await client.list();
+
     res.json({
-      directory: "/podcasts",
-      contents: list.map(file => ({ name: file.name, type: file.type })),
+      currentDir,
+      currentList: currentList.map(f => ({ name: f.name, type: f.type })),
+      parentDir,
+      parentList: parentList.map(f => ({ name: f.name, type: f.type })),
     });
   } catch (err) {
-    console.error("FTP list error:", err);
+    console.error("FTP debug error:", err);
     res.status(500).json({ error: err.message });
   } finally {
     client.close();
   }
 });
+
 
 
 // ✅ Proper CommonJS export
