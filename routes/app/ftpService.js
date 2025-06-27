@@ -83,7 +83,7 @@ function getFilesByGenre(genre, page=0, size=500) {
     .slice(page * size, (page + 1) * size);
 }
 
-const cron = require('cron');
+
 new cron.CronJob('*/10 * * * * *', refreshCache).start(); // refresh every 10s
 refreshCache();
 
