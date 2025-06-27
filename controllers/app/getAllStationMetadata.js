@@ -27,15 +27,18 @@ const stations = [
   }
 ];
 
-exports.getAllStationMetadata = async (req, res) => {
+exports.getAllRadioStationMetadata = async (req, res) => {
   try {
-    const results = await Promise.all(
+    const stationResults = await Promise.all(
       stations.map(async (station) => {
         const response = await axios.get(station.metadataUrl);
-        const metadata = response.data;
 
-        // Filter to keep only every first item in the pair and skip ones with empty title
-        const filtered = metadata.filter((item, index) => {
+        // Make sure response.data.metadata is an array
+        const metadataArray = Array.isArray(response.data.metadata)
+          ? response.data.metadata
+          : [];
+
+        const filtered = metadataArray.filter((item, index) => {
           return index % 2 === 0 && item.title && item.title.trim() !== '-';
         });
 
@@ -46,9 +49,12 @@ exports.getAllStationMetadata = async (req, res) => {
       })
     );
 
-    res.status(200).json({ stations: results });
-  } catch (err) {
-    console.error('❌ Failed to fetch metadata:', err.message);
-    res.status(500).json({ error: 'Failed to fetch station metadata', details: err.message });
+    res.status(200).json({ stations: stationResults });
+  } catch (error) {
+    console.error('❌ Error fetching radio metadata:', error.message);
+    res.status(500).json({
+      error: 'Failed to fetch station metadata',
+      details: error.message
+    });
   }
 };
