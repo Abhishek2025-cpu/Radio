@@ -1,4 +1,6 @@
+const express = require('express');
 const axios = require('axios');
+const router = express.Router();
 
 const stations = [
   {
@@ -27,34 +29,34 @@ const stations = [
   }
 ];
 
-exports.getAllRadioStationMetadata = async (req, res) => {
+router.get('/station-metadata', async (req, res) => {
   try {
-    const stationResults = await Promise.all(
+    const results = await Promise.all(
       stations.map(async (station) => {
-        const response = await axios.get(station.metadataUrl);
+        try {
+          const response = await axios.get(station.metadataUrl);
+          const metadata = Array.isArray(response.data)
+            ? response.data.filter((item, index) => index % 2 === 0 && item.title && item.title.trim() !== '-')
+            : [];
 
-        // Make sure response.data.metadata is an array
-        const metadataArray = Array.isArray(response.data.metadata)
-          ? response.data.metadata
-          : [];
-
-        const filtered = metadataArray.filter((item, index) => {
-          return index % 2 === 0 && item.title && item.title.trim() !== '-';
-        });
-
-        return {
-          name: station.name,
-          metadata: filtered
-        };
+          return {
+            name: station.name,
+            metadata
+          };
+        } catch (err) {
+          console.error(`Error fetching metadata for ${station.name}:`, err.message);
+          return {
+            name: station.name,
+            metadata: []
+          };
+        }
       })
     );
 
-    res.status(200).json({ stations: stationResults });
-  } catch (error) {
-    console.error('❌ Error fetching radio metadata:', error.message);
-    res.status(500).json({
-      error: 'Failed to fetch station metadata',
-      details: error.message
-    });
+    res.json({ stations: results });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch station metadata', details: err.message });
   }
-};
+});
+
+module.exports = router;
