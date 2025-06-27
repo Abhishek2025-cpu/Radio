@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+
 const router = express.Router();
 
 const stations = [
@@ -26,46 +27,53 @@ const stations = [
   {
     name: 'URBAN',
     metadataUrl: 'https://metadata.infomaniak.com/api/radio/8173/metadata-all-cover'
-  }
+  },
 ];
 
-router.get('/station-metadata', async (req, res) => {
+// API to get filtered metadata for all stations
+router.get('/radio-metadata', async (req, res) => {
   try {
     const results = await Promise.all(
       stations.map(async (station) => {
         try {
           const { data } = await axios.get(station.metadataUrl);
 
-          // Check if data is an array and filter every alternate entry
-          const metadata = Array.isArray(data)
-            ? data.filter((entry, index) =>
-                index % 2 === 0 &&
-                entry?.title?.trim() &&
-                entry.title.trim() !== '-'
-              )
-            : [];
+          const metadataArray = Array.isArray(data)
+            ? data
+            : Array.isArray(data.metadata)
+              ? data.metadata
+              : [];
+
+          const filteredMetadata = metadataArray.filter((entry, index) =>
+            index % 2 === 0 &&
+            entry.title &&
+            entry.title.trim() !== '-' &&
+            entry.title.trim() !== ''
+          );
 
           return {
             name: station.name,
-            metadata
+            metadata: filteredMetadata,
           };
         } catch (err) {
           console.error(`Error fetching metadata for ${station.name}:`, err.message);
           return {
             name: station.name,
-            metadata: []
+            metadata: [],
           };
         }
       })
     );
 
     res.json({ stations: results });
-  } catch (err) {
+  } catch (error) {
+    console.error('Failed to fetch station metadata:', error.message);
     res.status(500).json({
       error: 'Failed to fetch station metadata',
-      details: err.message
+      details: error.message,
     });
   }
 });
 
 module.exports = router;
+
