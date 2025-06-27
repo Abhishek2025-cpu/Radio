@@ -8,15 +8,33 @@ let latestPodcastsCache = []; // initialize as an empty array
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-const uploadToCloudinary = (buffer, folder = 'podcasts/covers') => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
-      if (result) resolve(result);
-      else reject(error);
+const ftp = require('basic-ftp');
+
+const uploadToFTP = async (buffer, fileName, remoteFolder = '/podcasts/covers') => {
+  const client = new ftp.Client();
+  client.ftp.verbose = false;
+
+  try {
+    await client.access({
+      host: process.env.FTP_HOST,
+      user: process.env.FTP_USER,
+      password: process.env.FTP_PASS,
+      secure: false,
     });
-    streamifier.createReadStream(buffer).pipe(stream);
-  });
+
+    await client.ensureDir(remoteFolder);
+    await client.uploadFrom(Buffer.from(buffer), `${remoteFolder}/${fileName}`);
+    
+    client.close();
+
+    const publicUrl = `http://${process.env.FTP_HOST}${remoteFolder}/${fileName}`;
+    return publicUrl;
+  } catch (err) {
+    client.close();
+    throw err;
+  }
 };
+
 
 exports.uploadGenreCover = [
   upload.single('coverImage'),
@@ -24,23 +42,13 @@ exports.uploadGenreCover = [
     try {
       const { genreName } = req.params;
 
-      console.log('📥 Incoming upload for genre:', genreName);
+      if (!genreName) return res.status(400).json({ error: 'Genre name is required in URL param' });
+      if (!req.file) return res.status(400).json({ error: 'No coverImage file uploaded' });
 
-      if (!genreName) {
-        return res.status(400).json({ error: 'Genre name is required in URL param' });
-      }
+      const fileExt = req.file.originalname.split('.').pop();
+      const fileName = `${genreName.replace(/\s+/g, '_').toLowerCase()}.${fileExt}`;
 
-      if (!req.file) {
-        console.log('⚠️ No file uploaded');
-        return res.status(400).json({ error: 'No coverImage file uploaded' });
-      }
-
-      console.log('📦 File received:', req.file.originalname, req.file.size + ' bytes');
-
-      const result = await uploadToCloudinary(req.file.buffer);
-      console.log('✅ Cloudinary upload success:', result.secure_url);
-
-      const coverImageUrl = result.secure_url;
+      const coverImageUrl = await uploadToFTP(req.file.buffer, fileName);
 
       const genre = await Genre.findOneAndUpdate(
         { name: genreName },
@@ -48,23 +56,17 @@ exports.uploadGenreCover = [
         { upsert: true, new: true, setDefaultsOnInsert: true }
       );
 
-      console.log('✅ Genre DB updated:', genre);
-
       res.status(200).json({
-        message: 'Cover image uploaded successfully',
+        message: 'Cover image uploaded successfully to FTP',
         genre
       });
-
     } catch (err) {
       console.error('❌ Upload Error:', err.message);
-      console.error(err.stack);
-      res.status(500).json({
-        error: 'Upload failed',
-        details: err.message
-      });
+      res.status(500).json({ error: 'FTP Upload failed', details: err.message });
     }
   }
 ];
+
 
 
 // GET /api/podcasts
