@@ -9,10 +9,33 @@ cloudinary.config({
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: async (req, file) => ({
-    folder: file.fieldname === 'images' ? 'news_images' : 'news_audio',
-    resource_type: file.mimetype.startsWith('audio') ? 'video' : 'image'
-  }),
+  params: async (req, file) => {
+    let folder = 'misc';
+    let resource_type = file.mimetype.startsWith('audio') ? 'video' : 'image';
+
+    // Folder logic based on field name
+    switch (file.fieldname) {
+      case 'images':
+        folder = 'news_images';
+        break;
+      case 'audio':
+        folder = 'news_audio';
+        break;
+      case 'thumbnail_image':
+        folder = 'radio_thumbnails';
+        break;
+      case 'song_cover':
+        folder = 'radio_song_covers';
+        break;
+      default:
+        folder = 'misc';
+    }
+
+    return {
+      folder,
+      resource_type
+    };
+  }
 });
 
 module.exports = { cloudinary, storage };
