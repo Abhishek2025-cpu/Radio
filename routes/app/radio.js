@@ -192,12 +192,36 @@ const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage });
 
 const stations = [
-  { name: 'U80', url: 'https://api.infomaniak.com/2/radio/8220/metadata', streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac' },
-  { name: 'U90', url: 'https://api.infomaniak.com/2/radio/8221/metadata', streamUrl: 'https://u90.ice.infomaniak.ch/u90-128.aac' },
-  { name: 'UDANCE', url: 'https://api.infomaniak.com/2/radio/8200/metadata', streamUrl: 'https://udance.ice.infomaniak.ch/udance-128.aac' },
-  { name: 'UPOP', url: 'https://api.infomaniak.com/2/radio/8222/metadata', streamUrl: 'https://upop.ice.infomaniak.ch/upop-128.aac' },
-  { name: 'URADIO', url: 'https://api.infomaniak.com/2/radio/8113/metadata', streamUrl: 'https://uradio-aac.ice.infomaniak.ch/uradio.aac' },
-  { name: 'URBAN', url: 'https://api.infomaniak.com/2/radio/8173/metadata', streamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac' },
+  {
+    name: 'U80',
+    url: 'https://metadata.infomaniak.com/api/radio/8220/metadata-all-cover',
+    streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac',
+  },
+  {
+    name: 'U90',
+    url: 'https://metadata.infomaniak.com/api/radio/8221/metadata-all-cover',
+    streamUrl: 'https://u90.ice.infomaniak.ch/u90-128.aac',
+  },
+  {
+    name: 'UDANCE',
+    url: 'https://metadata.infomaniak.com/api/radio/8200/metadata-all-cover',
+    streamUrl: 'https://udance.ice.infomaniak.ch/udance-128.aac',
+  },
+  {
+    name: 'UPOP',
+    url: 'https://metadata.infomaniak.com/api/radio/8222/metadata-all-cover',
+    streamUrl: 'https://upop.ice.infomaniak.ch/upop-128.aac',
+  },
+  {
+    name: 'URADIO',
+    url: 'https://metadata.infomaniak.com/api/radio/8113/metadata-all-cover',
+    streamUrl: 'https://uradio-aac.ice.infomaniak.ch/uradio.aac',
+  },
+  {
+    name: 'URBAN',
+    url: 'https://metadata.infomaniak.com/api/radio/8173/metadata-all-cover',
+    streamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac',
+  },
 ];
 
 const customStationStore = new Map();
