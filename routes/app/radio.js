@@ -181,20 +181,15 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-// --- THE FIX: Corrected the typo from 'httpsa' to 'https' ---
-const https = require('https');
+// We no longer need the 'https' module for the agent
 const { v4: uuidv4 } = require('uuid');
 const streamifier = require('streamifier');
 
 const multer = require('multer');
 const { cloudinary } = require('../../utils/cloudinary');
 
-// Use multer's memory storage to prevent writing to disk on the server
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage });
-
-// This agent is now created correctly and will work for the GET /stations route
-const agent = new https.Agent({ family: 4 });
 
 const stations = [
   { name: 'U80', url: 'https://api.infomaniak.com/2/radio/8220/metadata', streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac' },
@@ -220,20 +215,23 @@ const uploadToCloudinary = (buffer, filename) => {
   });
 };
 
-// GET combined station data - This will now work correctly
+// --- KEY CHANGES ARE IN THIS ROUTE ---
 router.get('/stations', async (req, res) => {
   try {
+    // 1. SIMPLIFY: We are only setting the essential User-Agent header. No custom agent.
     const axiosOptions = {
-      httpsAgent: agent,
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36' },
+      // Set a reasonable timeout to prevent requests from hanging indefinitely
+      timeout: 10000 // 10 seconds
     };
+
     const results = await Promise.all(
       stations.map(async ({ name, url, streamUrl }) => {
         try {
           const { data: apiResponse } = await axios.get(url, axiosOptions);
           if (apiResponse.result !== 'success' || !apiResponse.data) {
-            console.error(`API error for ${name}:`, apiResponse.error?.message || 'API result not success');
-            return { name, streamUrl, metadata: [], error: true, errorMessage: 'Failed to fetch metadata' };
+            console.error(`API LOGIC ERROR for ${name}: API result was not 'success' or data was missing.`);
+            return { name, streamUrl, metadata: [], error: true, errorMessage: 'Failed to process metadata.' };
           }
           const currentMetadata = apiResponse.data;
           const custom = customStationStore.get(name);
@@ -246,7 +244,14 @@ router.get('/stations', async (req, res) => {
             color: custom?.color || '',
           };
         } catch (err) {
-          console.error(`Fetch error for station: ${name}: ${err.message}`);
+          // 2. IMPROVE LOGGING: Log the entire error object to get the real reason for failure.
+          console.error(`\n--- AXIOS FETCH FAILED FOR STATION: ${name} ---`);
+          // This will log the specific error code like 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', etc.
+          console.error('Error Code:', err.code);
+          console.error('Request URL:', err.config?.url);
+          console.error('Full Error Object:', err);
+          console.error(`--- END OF ERROR FOR ${name} ---\n`);
+          
           return { name, streamUrl, metadata: [], error: true, errorMessage: 'Upstream API request failed.' };
         }
       })
@@ -258,12 +263,13 @@ router.get('/stations', async (req, res) => {
     }
     res.json({ stations: results });
   } catch (err) {
-    console.error('Unexpected error in /stations endpoint:', err.message);
+    console.error('FATAL UNEXPECTED ERROR in /stations endpoint:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// The rest of the routes are correct and remain unchanged.
+// --- NO CHANGES BELOW THIS LINE ---
+
 router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
   try {
     const { name } = req.params;
@@ -298,10 +304,8 @@ router.put('/update-stations/:name', upload.single('thumbnail_image'), async (re
   const { name } = req.params;
   const existing = customStationStore.get(name);
   if (!existing) return res.status(404).json({ error: 'Station not found' });
-
   const { streamUrl, color } = req.body;
   let imageUrl = existing.thumbnail_image;
-
   if (req.file) {
     try {
       imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
