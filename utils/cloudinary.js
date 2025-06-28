@@ -1,16 +1,12 @@
-
-
-module.exports = { cloudinary, storage };
 const cloudinary = require('cloudinary').v2;
 const streamifier = require('streamifier');
-require('dotenv').config(); // Make sure to install dotenv: npm install dotenv
+require('dotenv').config();
 
-// --- FIX 1: Load credentials securely from environment variables ---
-// Your API keys are now safe and not hardcoded.
+// Load credentials from .env
 cloudinary.config({
-  cloud_name: 'dvumlrxml',
-  api_key: '437932967899129',
-  api_secret: 'Pg4zI1EW8iCdotG29P4jcHFAW4s',
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 /**
@@ -21,9 +17,7 @@ cloudinary.config({
  */
 const uploadToCloudinary = (buffer, mimetype) => {
   return new Promise((resolve, reject) => {
-    
-    // --- FIX 2: Determine folder based on mimetype, not fieldname ---
-    let folder = 'news_media/misc'; // A default folder
+    let folder = 'news_media/misc';
     if (mimetype.startsWith('image/')) {
       folder = 'news_media/images';
     } else if (mimetype.startsWith('audio/')) {
@@ -31,28 +25,25 @@ const uploadToCloudinary = (buffer, mimetype) => {
     } else if (mimetype.startsWith('video/')) {
       folder = 'news_media/videos';
     }
-    
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
-        folder: folder,
-        // --- FIX 3: Let Cloudinary automatically detect the resource type ---
-        resource_type: 'auto' 
+        folder,
+        resource_type: 'auto',
       },
       (error, result) => {
         if (error) {
           console.error("Cloudinary Stream Upload Error:", error);
           reject(error);
         } else {
-          resolve(result); // Resolve with the full result object
+          resolve(result);
         }
       }
     );
 
-    // Pipe the buffer to the upload stream
     streamifier.createReadStream(buffer).pipe(uploadStream);
   });
 };
 
-// We only need to export the configured cloudinary instance and our new helper.
-// The broken `storage` engine is gone.
+// Export only after initialization
 module.exports = { cloudinary, uploadToCloudinary };
