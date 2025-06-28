@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const https = require('https');
+const { v4: uuidv4 } = require('uuid');
 
 
 const multer = require('multer');
@@ -97,9 +98,13 @@ router.get('/stations', async (req, res) => {
 // POST custom station
 router.post('/stations/change', upload.single('thumbnail_image'), async (req, res) => {
   const { name, streamUrl, color } = req.body;
-  if (!name || !streamUrl) return res.status(400).json({ error: 'Missing name or streamUrl' });
 
-  let imageUrl = '';
+  if (!name) return res.status(400).json({ error: 'Missing station name' });
+
+  // Fetch existing custom config (if any)
+  const existing = customStationStore.get(name) || {};
+
+  let imageUrl = existing.thumbnail_image || '';
   if (req.file) {
     try {
       imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
@@ -108,14 +113,17 @@ router.post('/stations/change', upload.single('thumbnail_image'), async (req, re
     }
   }
 
-  customStationStore.set(name, {
+  // Merge new values with existing ones
+  const updated = {
     name,
-    streamUrl,
-    color,
+    streamUrl: streamUrl || existing.streamUrl || '',
+    color: color || existing.color || '',
     thumbnail_image: imageUrl
-  });
+  };
 
-  res.json({ message: 'Custom station added', name });
+  customStationStore.set(name, updated);
+
+  res.json({ message: 'Custom station added/updated', updated });
 });
 
 // GET single custom station
