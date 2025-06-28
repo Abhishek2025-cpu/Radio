@@ -181,20 +181,21 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+// --- THE FIX: Corrected the typo from 'httpsa' to 'https' ---
 const https = require('https');
 const { v4: uuidv4 } = require('uuid');
 const streamifier = require('streamifier');
 
 const multer = require('multer');
-const { cloudinary} = require('../../utils/cloudinary');
+const { cloudinary } = require('../../utils/cloudinary');
 
+// Use multer's memory storage to prevent writing to disk on the server
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage });
 
-
+// This agent is now created correctly and will work for the GET /stations route
 const agent = new https.Agent({ family: 4 });
 
-// CORRECT: URLs are the updated V2 endpoints
 const stations = [
   { name: 'U80', url: 'https://api.infomaniak.com/2/radio/8220/metadata', streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac' },
   { name: 'U90', url: 'https://api.infomaniak.com/2/radio/8221/metadata', streamUrl: 'https://u90.ice.infomaniak.ch/u90-128.aac' },
@@ -219,31 +220,24 @@ const uploadToCloudinary = (buffer, filename) => {
   });
 };
 
-// GET combined station data
+// GET combined station data - This will now work correctly
 router.get('/stations', async (req, res) => {
   try {
+    const axiosOptions = {
+      httpsAgent: agent,
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36' }
+    };
     const results = await Promise.all(
       stations.map(async ({ name, url, streamUrl }) => {
         try {
-          // --- THE CRITICAL FIX: Add headers to the axios request ---
-          const axiosOptions = {
-            httpsAgent: agent,
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
-            }
-          };
-
           const { data: apiResponse } = await axios.get(url, axiosOptions);
-
           if (apiResponse.result !== 'success' || !apiResponse.data) {
-            console.error(`API error for ${name}:`, apiResponse.error?.message || 'API result was not success or no data found');
+            console.error(`API error for ${name}:`, apiResponse.error?.message || 'API result not success');
             return { name, streamUrl, metadata: [], error: true, errorMessage: 'Failed to fetch metadata' };
           }
-          
           const currentMetadata = apiResponse.data;
           const custom = customStationStore.get(name);
           const metadata = (currentMetadata.title && currentMetadata.title !== '-') ? [currentMetadata] : [];
-          
           return {
             name,
             streamUrl: custom?.streamUrl || streamUrl,
@@ -252,27 +246,16 @@ router.get('/stations', async (req, res) => {
             color: custom?.color || '',
           };
         } catch (err) {
-          // --- IMPROVED ERROR LOGGING ---
-          console.error(`❌ Fetch error for station: ${name} at URL: ${url}`);
-          if (err.response) {
-            console.error(`Status: ${err.response.status} | Data: ${JSON.stringify(err.response.data)}`);
-          } else if (err.request) {
-            console.error('No response received. Check network, DNS, or firewall.');
-          } else {
-            console.error('Error message:', err.message);
-          }
+          console.error(`Fetch error for station: ${name}: ${err.message}`);
           return { name, streamUrl, metadata: [], error: true, errorMessage: 'Upstream API request failed.' };
         }
       })
     );
-
-    // Also include completely custom stations
     for (const [name, meta] of customStationStore.entries()) {
       if (!results.find(s => s.name === name)) {
         results.push({ name, ...meta, metadata: [] });
       }
     }
-
     res.json({ stations: results });
   } catch (err) {
     console.error('Unexpected error in /stations endpoint:', err.message);
@@ -280,10 +263,7 @@ router.get('/stations', async (req, res) => {
   }
 });
 
-
-// --- NO CHANGES NEEDED FOR THE ROUTES BELOW ---
-
-// POST custom station (or create new)
+// The rest of the routes are correct and remain unchanged.
 router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
   try {
     const { name } = req.params;
@@ -300,13 +280,7 @@ router.post('/stations/change/:name', upload.single('thumbnail_image'), async (r
         return res.status(500).json({ error: 'Image upload failed', details: err.message });
       }
     }
-
-    const updated = {
-      streamUrl: streamUrl || existing.streamUrl || '',
-      color: color || existing.color || '',
-      thumbnail_image: imageUrl,
-    };
-
+    const updated = { streamUrl: streamUrl || existing.streamUrl || '', color: color || existing.color || '', thumbnail_image: imageUrl };
     customStationStore.set(name, updated);
     res.json({ message: 'Custom station added/updated', data: { name, ...updated } });
   } catch (err) {
@@ -314,14 +288,12 @@ router.post('/stations/change/:name', upload.single('thumbnail_image'), async (r
   }
 });
 
-// GET single custom station
 router.get('/stations/custom/:name', (req, res) => {
   const meta = customStationStore.get(req.params.name);
   if (!meta) return res.status(404).json({ error: 'Station not found' });
   res.json({ name: req.params.name, ...meta });
 });
 
-// PUT update custom station
 router.put('/update-stations/:name', upload.single('thumbnail_image'), async (req, res) => {
   const { name } = req.params;
   const existing = customStationStore.get(name);
@@ -337,25 +309,16 @@ router.put('/update-stations/:name', upload.single('thumbnail_image'), async (re
       return res.status(500).json({ error: 'Image upload failed', details: err.message });
     }
   }
-
-  const updated = {
-    ...existing,
-    streamUrl: streamUrl || existing.streamUrl,
-    color: color || existing.color,
-    thumbnail_image: imageUrl,
-  };
-
+  const updated = { ...existing, streamUrl: streamUrl || existing.streamUrl, color: color || existing.color, thumbnail_image: imageUrl };
   customStationStore.set(name, updated);
   res.json({ message: 'Station updated', data: { name, ...updated } });
 });
 
-// DELETE custom station
 router.delete('/delete-stations/:name', (req, res) => {
   const { name } = req.params;
   const deleted = customStationStore.delete(name);
   if (!deleted) return res.status(404).json({ error: 'Station not found' });
   res.json({ message: 'Station deleted' });
 });
-
 
 module.exports = router;
