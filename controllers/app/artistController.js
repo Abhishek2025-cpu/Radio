@@ -129,7 +129,6 @@ exports.deleteArtist = async (req, res) => {
   }
 };
 
-// Vote (IP-based)
 exports.voteArtist = async (req, res) => {
   try {
     const rawIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection.remoteAddress;
@@ -144,21 +143,29 @@ exports.voteArtist = async (req, res) => {
       return res.status(403).json({ message: 'Only private or local IPs are allowed' });
     }
 
+    const now = new Date();
+
+    // ✅ Step 1: Fetch all artists
+    const allArtists = await Artist.find({});
+
+    // ✅ Step 2: Check if this IP has voted for any artist in last 24 hrs
+    for (const a of allArtists) {
+      // Clean up expired votes
+      a.votedIPs = a.votedIPs.filter(entry => now - new Date(entry.votedAt) < 24 * 60 * 60 * 1000);
+
+      // Check hashed IP against this artist
+      const matched = await Promise.all(
+        a.votedIPs.map(entry => bcrypt.compare(ip, entry.ipHash))
+      );
+
+      if (matched.includes(true)) {
+        return res.status(403).json({ message: 'You have already voted for another artist in the last 24 hours' });
+      }
+    }
+
+    // ✅ Step 3: Proceed with vote for this artist
     const artist = await Artist.findById(req.params.id);
     if (!artist) return res.status(404).json({ message: 'Artist not found' });
-
-    // Filter out expired hashed IPs
-    const now = new Date();
-    artist.votedIPs = artist.votedIPs.filter(entry => now - new Date(entry.votedAt) < 24 * 60 * 60 * 1000);
-
-    // Check if IP already voted (compare hash)
-    const alreadyVoted = await Promise.all(
-      artist.votedIPs.map(entry => bcrypt.compare(ip, entry.ipHash))
-    );
-
-    if (alreadyVoted.includes(true)) {
-      return res.status(403).json({ message: 'You have already voted in the last 24 hours' });
-    }
 
     const ipHash = await bcrypt.hash(ip, 10);
 
@@ -172,7 +179,6 @@ exports.voteArtist = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 
 // controllers/app/artistController.js
