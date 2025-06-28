@@ -1,17 +1,7 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
 
-const mediaFiles = req.files || [];
 
-for (const file of mediaFiles) {
-  if (file.mimetype.startsWith('image/')) {
-    imageUrls.push({ url: file.path, type: 'image' });
-  } else if (file.mimetype.startsWith('audio/')) {
-    audioUrls.push({ url: file.path, type: 'audio' });
-  } else if (file.mimetype.startsWith('video/')) {
-    videoUrls.push({ url: file.path, type: 'video' });
-  }
-}
 
 
 // This function is CORRECT and does not need changes.
@@ -26,7 +16,17 @@ exports.createNews = async (req, res) => {
     const imageUrls = [];
     const audioUrls = [];
     const videoUrls = [];
-    const files = req.files || [];
+  const mediaFiles = req.files || [];
+
+for (const file of mediaFiles) {
+  if (file.mimetype.startsWith('image/')) {
+    imageUrls.push({ url: file.path, type: 'image' });
+  } else if (file.mimetype.startsWith('audio/')) {
+    audioUrls.push({ url: file.path, type: 'audio' });
+  } else if (file.mimetype.startsWith('video/')) {
+    videoUrls.push({ url: file.path, type: 'video' });
+  }
+}
 
     // --- THIS IS THE CORRECTED FILE HANDLING LOGIC ---
     // We loop through each file and manually upload its buffer to get a real URL
