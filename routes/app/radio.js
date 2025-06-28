@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const https = require('https');
+
+
+const multer = require('multer');
 const { cloudinary, storage } = require('../../utils/cloudinary');
 
 const upload = multer({ storage });
