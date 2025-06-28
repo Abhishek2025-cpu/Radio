@@ -1,13 +1,10 @@
-const mongoose = require('mongoose');
-
+// AFTER: New, Flexible Schema
 const newsSchema = new mongoose.Schema({
-  images: [String],
   author: { type: String, required: true },
   heading: { type: String, required: true },
   paragraphChunks: [String],
   subParagraphChunks: [String],
-  audioUrl: String,
-  visible: { type: Boolean, default: true } // <-- Add this
-}, { timestamps: true });
-
-module.exports = mongoose.model('News', newsSchema);
+  imageUrls: [String], // Renamed for consistency
+  audioUrls: [String], // Now an array to allow multiple audio files
+  videoUrls: [String], // New field for video files
+}, { timestamps: true }); // It's good practice to add timestamps
