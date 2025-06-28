@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const https = require('https');
+const { cloudinary, storage } = require('../../utils/cloudinary');
 
 const agent = new https.Agent({ family: 4 });
 
