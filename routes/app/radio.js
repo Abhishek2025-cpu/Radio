@@ -186,52 +186,24 @@ const { v4: uuidv4 } = require('uuid');
 const streamifier = require('streamifier');
 
 const multer = require('multer');
-// Assuming your cloudinary config is in this file and correct
 const { cloudinary, storage } = require('../../utils/cloudinary');
 
 const upload = multer({ storage });
 
-// Using an agent can sometimes help with network issues, but is not strictly necessary for the fix.
 const agent = new https.Agent({ family: 4 });
 
-// --- FIX 1: Updated station URLs to the new Infomaniak API v2 endpoint ---
+// CORRECT: URLs are the updated V2 endpoints
 const stations = [
-  {
-    name: 'U80',
-    url: 'https://api.infomaniak.com/2/radio/8220/metadata',
-    streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac',
-  },
-  {
-    name: 'U90',
-    url: 'https://api.infomaniak.com/2/radio/8221/metadata',
-    streamUrl: 'https://u90.ice.infomaniak.ch/u90-128.aac',
-  },
-  {
-    name: 'UDANCE',
-    url: 'https://api.infomaniak.com/2/radio/8200/metadata',
-    streamUrl: 'https://udance.ice.infomaniak.ch/udance-128.aac',
-  },
-  {
-    name: 'UPOP',
-    url: 'https://api.infomaniak.com/2/radio/8222/metadata',
-    streamUrl: 'https://upop.ice.infomaniak.ch/upop-128.aac',
-  },
-  {
-    name: 'URADIO',
-    url: 'https://api.infomaniak.com/2/radio/8113/metadata',
-    streamUrl: 'https://uradio-aac.ice.infomaniak.ch/uradio.aac',
-  },
-  {
-    name: 'URBAN',
-    url: 'https://api.infomaniak.com/2/radio/8173/metadata',
-    streamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac',
-  },
+  { name: 'U80', url: 'https://api.infomaniak.com/2/radio/8220/metadata', streamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac' },
+  { name: 'U90', url: 'https://api.infomaniak.com/2/radio/8221/metadata', streamUrl: 'https://u90.ice.infomaniak.ch/u90-128.aac' },
+  { name: 'UDANCE', url: 'https://api.infomaniak.com/2/radio/8200/metadata', streamUrl: 'https://udance.ice.infomaniak.ch/udance-128.aac' },
+  { name: 'UPOP', url: 'https://api.infomaniak.com/2/radio/8222/metadata', streamUrl: 'https://upop.ice.infomaniak.ch/upop-128.aac' },
+  { name: 'URADIO', url: 'https://api.infomaniak.com/2/radio/8113/metadata', streamUrl: 'https://uradio-aac.ice.infomaniak.ch/uradio.aac' },
+  { name: 'URBAN', url: 'https://api.infomaniak.com/2/radio/8173/metadata', streamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac' },
 ];
 
-// This remains the same, used for storing user customizations
 const customStationStore = new Map();
 
-// This helper function is fine, no changes needed
 const uploadToCloudinary = (buffer, filename) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
@@ -251,21 +223,23 @@ router.get('/stations', async (req, res) => {
     const results = await Promise.all(
       stations.map(async ({ name, url, streamUrl }) => {
         try {
-          // --- FIX 2: Correctly handle the new API response structure ---
-          const { data: apiResponse } = await axios.get(url, { httpsAgent: agent });
-          
-          // --- FIX 3: Add a check for a successful API result and existence of data ---
+          // --- THE CRITICAL FIX: Add headers to the axios request ---
+          const axiosOptions = {
+            httpsAgent: agent,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36'
+            }
+          };
+
+          const { data: apiResponse } = await axios.get(url, axiosOptions);
+
           if (apiResponse.result !== 'success' || !apiResponse.data) {
-            console.error(`API error for ${name}:`, apiResponse.error?.message || 'No data found');
+            console.error(`API error for ${name}:`, apiResponse.error?.message || 'API result was not success or no data found');
             return { name, streamUrl, metadata: [], error: true, errorMessage: 'Failed to fetch metadata' };
           }
           
           const currentMetadata = apiResponse.data;
           const custom = customStationStore.get(name);
-          
-          // --- FIX 4: Simplify the metadata processing based on the new structure ---
-          // The new API returns a single object. We put it in an array for frontend consistency
-          // if the title is valid.
           const metadata = (currentMetadata.title && currentMetadata.title !== '-') ? [currentMetadata] : [];
           
           return {
@@ -276,37 +250,42 @@ router.get('/stations', async (req, res) => {
             color: custom?.color || '',
           };
         } catch (err) {
-          console.error(`Fetch error for ${name}:`, err.message);
-          // Return a structured error object for this specific station
-          return { name, streamUrl, metadata: [], error: true, errorMessage: err.message };
+          // --- IMPROVED ERROR LOGGING ---
+          console.error(`❌ Fetch error for station: ${name} at URL: ${url}`);
+          if (err.response) {
+            console.error(`Status: ${err.response.status} | Data: ${JSON.stringify(err.response.data)}`);
+          } else if (err.request) {
+            console.error('No response received. Check network, DNS, or firewall.');
+          } else {
+            console.error('Error message:', err.message);
+          }
+          return { name, streamUrl, metadata: [], error: true, errorMessage: 'Upstream API request failed.' };
         }
       })
     );
 
-    // Also include completely custom stations (this logic is fine)
+    // Also include completely custom stations
     for (const [name, meta] of customStationStore.entries()) {
       if (!results.find(s => s.name === name)) {
-        results.push({ name, ...meta, metadata: [] }); // ensure metadata is an array
+        results.push({ name, ...meta, metadata: [] });
       }
     }
 
     res.json({ stations: results });
   } catch (err) {
-    // This catches errors in Promise.all or other unexpected issues
     console.error('Unexpected error in /stations endpoint:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// The rest of your endpoints operate on the in-memory `customStationStore`
-// and do not make external calls, so they are correct and do not need changes.
+
+// --- NO CHANGES NEEDED FOR THE ROUTES BELOW ---
 
 // POST custom station (or create new)
 router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
   try {
     const { name } = req.params;
     const { streamUrl, color } = req.body;
-
     if (!name) return res.status(400).json({ error: 'Missing station name' });
 
     const existing = customStationStore.get(name) || {};
@@ -316,7 +295,6 @@ router.post('/stations/change/:name', upload.single('thumbnail_image'), async (r
       try {
         imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
       } catch (err) {
-        console.error('Cloudinary upload failed:', err);
         return res.status(500).json({ error: 'Image upload failed', details: err.message });
       }
     }
@@ -330,7 +308,6 @@ router.post('/stations/change/:name', upload.single('thumbnail_image'), async (r
     customStationStore.set(name, updated);
     res.json({ message: 'Custom station added/updated', data: { name, ...updated } });
   } catch (err) {
-    console.error('Unexpected server error in POST /stations/change/:name :', err);
     res.status(500).json({ error: 'Unexpected server error', details: err.message });
   }
 });
@@ -342,7 +319,7 @@ router.get('/stations/custom/:name', (req, res) => {
   res.json({ name: req.params.name, ...meta });
 });
 
-// PUT update custom station (This route seems redundant with POST /stations/change/:name but is kept)
+// PUT update custom station
 router.put('/update-stations/:name', upload.single('thumbnail_image'), async (req, res) => {
   const { name } = req.params;
   const existing = customStationStore.get(name);
@@ -355,7 +332,6 @@ router.put('/update-stations/:name', upload.single('thumbnail_image'), async (re
     try {
       imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
     } catch (err) {
-      console.error('Cloudinary upload failed:', err);
       return res.status(500).json({ error: 'Image upload failed', details: err.message });
     }
   }
@@ -378,5 +354,6 @@ router.delete('/delete-stations/:name', (req, res) => {
   if (!deleted) return res.status(404).json({ error: 'Station not found' });
   res.json({ message: 'Station deleted' });
 });
+
 
 module.exports = router;
