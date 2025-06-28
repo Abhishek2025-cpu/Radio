@@ -98,33 +98,38 @@ router.get('/stations', async (req, res) => {
 
 // POST custom station
 router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
-  const { name } = req.params;
-  const { streamUrl, color } = req.body;
+  try {
+    const { name } = req.params;
+    const { streamUrl, color } = req.body;
 
-  if (!name) return res.status(400).json({ error: 'Missing station name' });
+    if (!name) return res.status(400).json({ error: 'Missing station name' });
 
-  const existing = customStationStore.get(name) || {};
+    const existing = customStationStore.get(name) || {};
 
-  let imageUrl = existing.thumbnail_image || '';
-  if (req.file) {
-    try {
-      imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
-    } catch (err) {
-      return res.status(500).json({ error: 'Image upload failed', details: err.message });
+    let imageUrl = existing.thumbnail_image || '';
+    if (req.file) {
+      try {
+        imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
+      } catch (err) {
+        return res.status(500).json({ error: 'Image upload failed', details: err.message });
+      }
     }
+
+    const updated = {
+      name,
+      streamUrl: streamUrl || existing.streamUrl || '',
+      color: color || existing.color || '',
+      thumbnail_image: imageUrl,
+    };
+
+    customStationStore.set(name, updated);
+    res.json({ message: 'Custom station added/updated', updated });
+  } catch (err) {
+    console.error('Unexpected server error:', err);
+    res.status(500).json({ error: 'Unexpected server error', details: err.message });
   }
-
-  const updated = {
-    name,
-    streamUrl: streamUrl || existing.streamUrl || '',
-    color: color || existing.color || '',
-    thumbnail_image: imageUrl
-  };
-
-  customStationStore.set(name, updated);
-
-  res.json({ message: 'Custom station added/updated', updated });
 });
+
 
 
 // GET single custom station
