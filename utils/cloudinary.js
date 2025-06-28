@@ -4,9 +4,9 @@ require('dotenv').config();
 
 // Load credentials from .env
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
+  cloud_name: 'dvumlrxml',
+  api_key: '437932967899129',
+  api_secret: 'Pg4zI1EW8iCdotG29P4jcHFAW4s',
 });
 
 /**
