@@ -97,12 +97,12 @@ router.get('/stations', async (req, res) => {
 });
 
 // POST custom station
-router.post('/stations/change', upload.single('thumbnail_image'), async (req, res) => {
-  const { name, streamUrl, color } = req.body;
+router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
+  const { name } = req.params;
+  const { streamUrl, color } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Missing station name' });
 
-  // Fetch existing custom config (if any)
   const existing = customStationStore.get(name) || {};
 
   let imageUrl = existing.thumbnail_image || '';
@@ -114,7 +114,6 @@ router.post('/stations/change', upload.single('thumbnail_image'), async (req, re
     }
   }
 
-  // Merge new values with existing ones
   const updated = {
     name,
     streamUrl: streamUrl || existing.streamUrl || '',
@@ -126,6 +125,7 @@ router.post('/stations/change', upload.single('thumbnail_image'), async (req, re
 
   res.json({ message: 'Custom station added/updated', updated });
 });
+
 
 // GET single custom station
 router.get('/stations/custom/:name', (req, res) => {
