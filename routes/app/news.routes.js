@@ -2,12 +2,16 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 
-// BEST PRACTICE: Use memoryStorage to avoid 502 errors on production servers.
-// The file buffer is then sent to Cloudinary from your controller.
+// --- FIX 1: Add file size limits to the multer configuration ---
 const memoryStorage = multer.memoryStorage();
-const upload = multer({ storage: memoryStorage });
+const upload = multer({
+  storage: memoryStorage,
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50 MB limit for each file
+    // You can also set other limits, e.g., 'files: 12'
+  },
+});
 
-// Correctly import the controller functions using destructuring
 const {
   createNews,
   getAllNews,
@@ -17,27 +21,52 @@ const {
   deleteNews
 } = require('../../controllers/app/news.Controller');
 
-// --- These routes do not handle file uploads and are fine ---
-router.get('/get-news', getAllNews);
-router.get('/get-news/:id', getSingleNews);
+// Define a reusable upload middleware with error handling
+const uploadMedia = upload.array('media', 12);
 
-// --- This route had a reference error. It is now fixed. ---
+// --- FIX 2: Create a dedicated Multer error handler function ---
+function handleMulterError(err, req, res, next) {
+  if (err instanceof multer.MulterError) {
+    console.error("❌ Multer Error:", err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ error: 'File is too large. Maximum size is 50MB.' });
+    }
+    // Handle other Multer errors (e.g., LIMIT_UNEXPECTED_FILE)
+    return res.status(400).json({ error: `File upload error: ${err.message}` });
+  } else if (err) {
+    // Handle other non-Multer errors
+    console.error("❌ Non-Multer Error during upload:", err);
+    return res.status(500).json({ error: 'An unknown error occurred during file upload.' });
+  }
+  // If no error, proceed to the next middleware (the controller)
+  next();
+}
+
+
+// --- Apply the middleware and the error handler to your routes ---
+
 router.post(
   '/add-news',
-  upload.array('media', 12),
-  createNews // FIX: Changed from 'newsController.createNews' to the correctly imported 'createNews'
+  (req, res, next) => {
+    // Wrap the upload middleware in a function to pass errors to our handler
+    uploadMedia(req, res, (err) => handleMulterError(err, req, res, next));
+  },
+  createNews
 );
 
-// --- This was the main source of the "Unexpected field" error. It is now fixed. ---
 router.put(
   '/update-news/:id',
-  upload.array('media', 12), // FIX: Changed from upload.fields(...) to use the same generic 'media' array.
+  (req, res, next) => {
+    uploadMedia(req, res, (err) => handleMulterError(err, req, res, next));
+  },
   updateNews
 );
 
-// --- These routes are fine ---
+
+// --- The rest of your routes remain the same ---
+router.get('/get-news', getAllNews);
+router.get('/get-news/:id', getSingleNews);
 router.patch('/toggle-news/:id', toggleNewsVisibility);
 router.delete('/delete-news/:id', deleteNews);
-
 
 module.exports = router;
