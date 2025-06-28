@@ -1,6 +1,19 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
 
+const mediaFiles = req.files || [];
+
+for (const file of mediaFiles) {
+  if (file.mimetype.startsWith('image/')) {
+    imageUrls.push({ url: file.path, type: 'image' });
+  } else if (file.mimetype.startsWith('audio/')) {
+    audioUrls.push({ url: file.path, type: 'audio' });
+  } else if (file.mimetype.startsWith('video/')) {
+    videoUrls.push({ url: file.path, type: 'video' });
+  }
+}
+
+
 // This function is CORRECT and does not need changes.
 exports.createNews = async (req, res) => {
   try {
