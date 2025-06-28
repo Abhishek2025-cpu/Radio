@@ -4,13 +4,10 @@ const splitTextByCharLength = require('../../utils/textSplitter');
 // This function is CORRECT and does not need changes.
 exports.createNews = async (req, res) => {
   try {
-    console.log("✅ BODY:", req.body);
-    console.log("✅ FILES:", req.files);
-
     const { author, heading, paragraph, subParagraph } = req.body;
 
     if (!heading || !paragraph || !author) {
-      return res.status(400).json({ error: "Missing required fields: heading, paragraph, or author." });
+      return res.status(400).json({ error: "Missing required fields." });
     }
 
     const imageUrls = [];
@@ -18,20 +15,39 @@ exports.createNews = async (req, res) => {
     const videoUrls = [];
     const files = req.files || [];
 
+    // --- THIS IS THE CORRECTED FILE HANDLING LOGIC ---
+    // We loop through each file and manually upload its buffer to get a real URL
     for (const file of files) {
-      if (file.mimetype.startsWith('image/')) {
-        imageUrls.push(file.path);
-      } else if (file.mimetype.startsWith('audio/')) {
-        audioUrls.push(file.path);
-      } else if (file.mimetype.startsWith('video/')) {
-        videoUrls.push(file.path);
+      try {
+        // 1. Upload the file buffer using our helper
+        const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
+        
+        // 2. Get the real, secure URL from the result
+        const fileUrl = uploadResult.secure_url;
+
+        // 3. Push the REAL URL into the correct array
+        if (uploadResult.resource_type === 'image') {
+          imageUrls.push(fileUrl);
+        } else if (uploadResult.resource_type === 'video') {
+          // Cloudinary classifies audio as a 'video' resource type.
+          // We can distinguish them using the original mimetype.
+          if (file.mimetype.startsWith('audio/')) {
+            audioUrls.push(fileUrl);
+          } else {
+            videoUrls.push(fileUrl);
+          }
+        }
+      } catch (uploadError) {
+        console.error("❌ Cloudinary upload failed for one of the files:", uploadError);
+        // Decide how to handle a single failed upload. For now, we'll just skip it.
       }
     }
 
-    console.log("🖼️ Image URLs:", imageUrls);
-    console.log("🔊 Audio URLs:", audioUrls);
-    console.log("📹 Video URLs:", videoUrls);
+    console.log("🖼️ Final Image URLs:", imageUrls);
+    console.log("🔊 Final Audio URLs:", audioUrls);
+    console.log("📹 Final Video URLs:", videoUrls);
 
+    // The rest of your code remains the same
     const paragraphChunks = splitTextByCharLength(paragraph);
     const subParagraphChunks = splitTextByCharLength(subParagraph || '');
 
@@ -45,21 +61,14 @@ exports.createNews = async (req, res) => {
       videoUrls,
     };
 
-    console.log("📦 Final Payload to Save:", dataToSave);
     const newNews = await News.create(dataToSave);
-
     res.status(201).json({ message: "News created successfully", data: newNews });
 
   } catch (error) {
-    console.error("❌ Error in createNews:", error);
-    res.status(500).json({
-      error: "Internal Server Error",
-      message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    });
+    console.error("❌ Fatal Error in createNews:", error);
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
   }
 };
-
 // --- THIS IS THE FIXED FUNCTION ---
 exports.updateNews = async (req, res) => {
   try {
