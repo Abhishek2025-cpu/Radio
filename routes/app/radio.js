@@ -186,9 +186,11 @@ const { v4: uuidv4 } = require('uuid');
 const streamifier = require('streamifier');
 
 const multer = require('multer');
-const { cloudinary, storage } = require('../../utils/cloudinary');
+const { cloudinary} = require('../../utils/cloudinary');
 
-const upload = multer({ storage });
+const memoryStorage = multer.memoryStorage();
+const upload = multer({ storage: memoryStorage });
+
 
 const agent = new https.Agent({ family: 4 });
 
