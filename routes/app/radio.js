@@ -181,17 +181,18 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
-// We no longer need the 'https' module for the agent
 const { v4: uuidv4 } = require('uuid');
 const streamifier = require('streamifier');
 
 const multer = require('multer');
+// Assuming cloudinary is configured correctly in this path
 const { cloudinary } = require('../../utils/cloudinary');
 
 const memoryStorage = multer.memoryStorage();
 const upload = multer({ storage: memoryStorage });
 
-const stations = [
+// This is our base list of stations.
+const predefinedStations = [
   {
     name: 'U80',
     url: 'https://metadata.infomaniak.com/api/radio/8220/metadata-all-cover',
@@ -224,6 +225,8 @@ const stations = [
   },
 ];
 
+// This stores all custom overrides and new stations.
+// Format: { streamUrl?, metadataUrl?, color?, thumbnail_image? }
 const customStationStore = new Map();
 
 const uploadToCloudinary = (buffer, filename) => {
@@ -239,78 +242,128 @@ const uploadToCloudinary = (buffer, filename) => {
   });
 };
 
-// --- KEY CHANGES ARE IN THIS ROUTE ---
+// --- THIS IS THE FULLY REBUILT AND CORRECTED ROUTE ---
 router.get('/stations', async (req, res) => {
   try {
-    // 1. SIMPLIFY: We are only setting the essential User-Agent header. No custom agent.
+    // *** STEP 1: Create a unified list of all stations to be processed. ***
+    const allStations = [];
+    const stationMap = new Map();
+
+    // Add predefined stations first
+    predefinedStations.forEach(station => {
+      stationMap.set(station.name, { ...station });
+    });
+
+    // Override with or add custom stations
+    for (const [name, customData] of customStationStore.entries()) {
+        // If it's a modification of a predefined station, update it
+        if (stationMap.has(name)) {
+            const existingStation = stationMap.get(name);
+            stationMap.set(name, { ...existingStation, ...customData });
+        } else {
+            // If it's a completely new custom station, add it
+            // It MUST have a streamUrl and a metadataUrl (url) to be useful
+            stationMap.set(name, { name, ...customData, url: customData.metadataUrl });
+        }
+    }
+    
+    // Convert the map back to an array for Promise.all
+    const stationsToFetch = Array.from(stationMap.values());
+
+    // *** STEP 2: Fetch metadata for the unified list. ***
     const axiosOptions = {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/108.0.0.0 Safari/537.36' },
-      // Set a reasonable timeout to prevent requests from hanging indefinitely
-      timeout: 10000 // 10 seconds
+      timeout: 10000,
     };
 
-    const results = await Promise.all(
-      stations.map(async ({ name, url, streamUrl }) => {
-        try {
-          const { data: apiResponse } = await axios.get(url, axiosOptions);
-          if (apiResponse.result !== 'success' || !apiResponse.data) {
-            console.error(`API LOGIC ERROR for ${name}: API result was not 'success' or data was missing.`);
-            return { name, streamUrl, metadata: [], error: true, errorMessage: 'Failed to process metadata.' };
-          }
-          const currentMetadata = apiResponse.data;
-          const custom = customStationStore.get(name);
-          const metadata = (currentMetadata.title && currentMetadata.title !== '-') ? [currentMetadata] : [];
-          return {
-            name,
-            streamUrl: custom?.streamUrl || streamUrl,
-            metadata,
-            thumbnail_image: custom?.thumbnail_image || currentMetadata.cover || '',
-            color: custom?.color || '',
-          };
-        } catch (err) {
-          // 2. IMPROVE LOGGING: Log the entire error object to get the real reason for failure.
-          console.error(`\n--- AXIOS FETCH FAILED FOR STATION: ${name} ---`);
-          // This will log the specific error code like 'ETIMEDOUT', 'ENOTFOUND', 'ECONNRESET', etc.
-          console.error('Error Code:', err.code);
-          console.error('Request URL:', err.config?.url);
-          console.error('Full Error Object:', err);
-          console.error(`--- END OF ERROR FOR ${name} ---\n`);
-          
-          return { name, streamUrl, metadata: [], error: true, errorMessage: 'Upstream API request failed.' };
-        }
-      })
-    );
-    for (const [name, meta] of customStationStore.entries()) {
-      if (!results.find(s => s.name === name)) {
-        results.push({ name, ...meta, metadata: [] });
+    const resultsPromises = stationsToFetch.map(async (station) => {
+      // If a custom station was added without a metadata URL, skip fetching
+      if (!station.url) {
+        return {
+          name: station.name,
+          streamUrl: station.streamUrl || '',
+          metadata: [],
+          thumbnail_image: station.thumbnail_image || '',
+          color: station.color || '',
+        };
       }
-    }
+
+      try {
+        const { data: apiResponse } = await axios.get(station.url, axiosOptions);
+        
+        // ** MORE ROBUST CHECK **: Ensure response is a valid object with the correct structure.
+        if (apiResponse && apiResponse.result === 'success' && apiResponse.data) {
+          const currentMetadata = apiResponse.data;
+          // Check if there is valid song title information
+          const metadata = (currentMetadata.title && currentMetadata.title !== '-') ? [currentMetadata] : [];
+
+          return {
+            name: station.name,
+            streamUrl: station.streamUrl,
+            metadata,
+            thumbnail_image: station.thumbnail_image || currentMetadata.cover || '',
+            color: station.color || '',
+          };
+        } else {
+          // This handles cases where the API returns an error message or unexpected format
+          console.error(`Invalid API response for ${station.name}:`, apiResponse);
+          return {
+            name: station.name,
+            streamUrl: station.streamUrl,
+            metadata: [],
+            error: true,
+            errorMessage: 'Invalid or failed API response.',
+            thumbnail_image: station.thumbnail_image || '',
+            color: station.color || '',
+          };
+        }
+      } catch (err) {
+        // This handles network errors (timeout, connection refused, etc.)
+        console.error(`Axios fetch failed for ${station.name}:`, err.code, err.message);
+        return {
+          name: station.name,
+          streamUrl: station.streamUrl,
+          metadata: [],
+          error: true,
+          errorMessage: 'Upstream API request timed out or failed.',
+          thumbnail_image: station.thumbnail_image || '',
+          color: station.color || '',
+        };
+      }
+    });
+
+    const results = await Promise.all(resultsPromises);
     res.json({ stations: results });
+
   } catch (err) {
     console.error('FATAL UNEXPECTED ERROR in /stations endpoint:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// --- NO CHANGES BELOW THIS LINE ---
-
+// --- UPDATED ROUTE TO ACCEPT metadataUrl ---
 router.post('/stations/change/:name', upload.single('thumbnail_image'), async (req, res) => {
   try {
     const { name } = req.params;
-    const { streamUrl, color } = req.body;
+    // Now we accept 'metadataUrl'
+    const { streamUrl, color, metadataUrl } = req.body;
     if (!name) return res.status(400).json({ error: 'Missing station name' });
 
     const existing = customStationStore.get(name) || {};
     let imageUrl = existing.thumbnail_image || '';
 
     if (req.file) {
-      try {
-        imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
-      } catch (err) {
-        return res.status(500).json({ error: 'Image upload failed', details: err.message });
-      }
+      imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
     }
-    const updated = { streamUrl: streamUrl || existing.streamUrl || '', color: color || existing.color || '', thumbnail_image: imageUrl };
+    
+    const updated = {
+      streamUrl: streamUrl || existing.streamUrl,
+      color: color || existing.color,
+      thumbnail_image: imageUrl,
+      // Store the metadataUrl for custom stations
+      metadataUrl: metadataUrl || existing.metadataUrl, 
+    };
+    
     customStationStore.set(name, updated);
     res.json({ message: 'Custom station added/updated', data: { name, ...updated } });
   } catch (err) {
@@ -318,28 +371,39 @@ router.post('/stations/change/:name', upload.single('thumbnail_image'), async (r
   }
 });
 
+// --- UPDATED ROUTE TO ACCEPT metadataUrl ---
+router.put('/update-stations/:name', upload.single('thumbnail_image'), async (req, res) => {
+    const { name } = req.params;
+    const existing = customStationStore.get(name);
+    if (!existing) return res.status(404).json({ error: 'Station not found' });
+
+    // Now we accept 'metadataUrl'
+    const { streamUrl, color, metadataUrl } = req.body;
+    let imageUrl = existing.thumbnail_image;
+
+    if (req.file) {
+        imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
+    }
+
+    const updated = {
+        ...existing,
+        streamUrl: streamUrl || existing.streamUrl,
+        color: color || existing.color,
+        thumbnail_image: imageUrl,
+        // Update the metadataUrl
+        metadataUrl: metadataUrl || existing.metadataUrl,
+    };
+
+    customStationStore.set(name, updated);
+    res.json({ message: 'Station updated', data: { name, ...updated } });
+});
+
+
+// --- Other routes remain the same ---
 router.get('/stations/custom/:name', (req, res) => {
   const meta = customStationStore.get(req.params.name);
   if (!meta) return res.status(404).json({ error: 'Station not found' });
   res.json({ name: req.params.name, ...meta });
-});
-
-router.put('/update-stations/:name', upload.single('thumbnail_image'), async (req, res) => {
-  const { name } = req.params;
-  const existing = customStationStore.get(name);
-  if (!existing) return res.status(404).json({ error: 'Station not found' });
-  const { streamUrl, color } = req.body;
-  let imageUrl = existing.thumbnail_image;
-  if (req.file) {
-    try {
-      imageUrl = await uploadToCloudinary(req.file.buffer, `${name}_${uuidv4()}`);
-    } catch (err) {
-      return res.status(500).json({ error: 'Image upload failed', details: err.message });
-    }
-  }
-  const updated = { ...existing, streamUrl: streamUrl || existing.streamUrl, color: color || existing.color, thumbnail_image: imageUrl };
-  customStationStore.set(name, updated);
-  res.json({ message: 'Station updated', data: { name, ...updated } });
 });
 
 router.delete('/delete-stations/:name', (req, res) => {
