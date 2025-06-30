@@ -1,6 +1,7 @@
 const Artist = require('../../models/mongo/Artist');
 const { uploadToCloudinary } = require('../../config/cloudinary');
 
+
 const ipaddr = require('ipaddr.js');
 const bcrypt = require('bcryptjs');
 
