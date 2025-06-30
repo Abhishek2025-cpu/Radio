@@ -15,35 +15,36 @@ cloudinary.config({
  * @param {String} mimetype The file's mimetype from req.file.mimetype.
  * @returns {Promise<Object>} A promise that resolves with the Cloudinary upload result.
  */
-const uploadToCloudinary = (buffer, mimetype) => {
+const uploadToCloudinary = (input, mimetype, isPath = false) => {
   return new Promise((resolve, reject) => {
     let folder = 'news_media/misc';
-    if (mimetype.startsWith('image/')) {
-      folder = 'news_media/images';
-    } else if (mimetype.startsWith('audio/')) {
-      folder = 'news_media/audio';
-    } else if (mimetype.startsWith('video/')) {
-      folder = 'news_media/videos';
-    }
+    if (mimetype?.startsWith('image/')) folder = 'news_media/images';
+    else if (mimetype?.startsWith('audio/')) folder = 'news_media/audio';
+    else if (mimetype?.startsWith('video/')) folder = 'news_media/videos';
 
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder,
-        resource_type: 'auto',
-      },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary Stream Upload Error:", error);
-          reject(error);
-        } else {
-          resolve(result);
-        }
+    const uploadOptions = {
+      folder,
+      resource_type: 'auto',
+    };
+
+    const callback = (error, result) => {
+      if (error) {
+        console.error("Cloudinary Upload Error:", error);
+        reject(error);
+      } else {
+        resolve(result);
       }
-    );
+    };
 
-    streamifier.createReadStream(buffer).pipe(uploadStream);
+    if (isPath) {
+      cloudinary.uploader.upload(input, uploadOptions, callback);
+    } else {
+      const stream = cloudinary.uploader.upload_stream(uploadOptions, callback);
+      streamifier.createReadStream(input).pipe(stream);
+    }
   });
 };
+
 
 // Export only after initialization
 module.exports = { cloudinary, uploadToCloudinary };

@@ -10,17 +10,18 @@ exports.createArtist = async (req, res) => {
     const { name, songName } = req.body;
     const artistData = { name, songName };
 
-    // Check and upload profileImage
+    // Upload profileImage using path
     if (req.files?.profileImage?.[0]) {
       const profileImageFile = req.files.profileImage[0];
       const uploadedImage = await uploadToCloudinary(
-        profileImageFile.buffer,
-        profileImageFile.mimetype
+        profileImageFile.path,
+        profileImageFile.mimetype,
+        true // use path
       );
       artistData.profileImage = uploadedImage.secure_url;
     }
 
-    // Check and upload media
+    // Upload media using buffer
     if (req.files?.media?.[0]) {
       const mediaFile = req.files.media[0];
       const uploadedMedia = await uploadToCloudinary(
@@ -37,6 +38,7 @@ exports.createArtist = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
 
 
 
