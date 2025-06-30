@@ -11,21 +11,7 @@ const bcrypt = require('bcryptjs');
 
 
 
-exports.uploadToCloudinary = (buffer, mimetype) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (err, result) => {
-      if (err) return reject(err);
-      resolve(result);
-    });
 
-    const { Readable } = require('stream');
-    const readable = new Readable();
-    readable._read = () => {};
-    readable.push(buffer);
-    readable.push(null);
-    readable.pipe(stream);
-  });
-};
 
 
 exports.createArtist = async (req, res) => {
