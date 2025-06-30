@@ -1,5 +1,5 @@
 const Artist = require('../../models/mongo/Artist');
-const { uploadToCloudinary } = require('../../config/cloudinary');
+const { uploadToCloudinary } = require('../../utils/cloudinary');
 
 
 const ipaddr = require('ipaddr.js');
