@@ -49,7 +49,8 @@ exports.createArtist = async (req, res) => {
       name,
       songName,
       profileImage: imageUrl,
-      media: mediaUrl, // new field in schema
+mediaUrl: mediaUrl,
+
       votes: 0,
       votedIPs: [],
     });
