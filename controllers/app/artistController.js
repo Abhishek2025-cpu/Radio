@@ -5,7 +5,14 @@ const { uploadToCloudinary } = require('../../utils/cloudinary');
 const ipaddr = require('ipaddr.js');
 const bcrypt = require('bcryptjs');
 
+const fs = require('fs/promises'); // Import fs for file cleanup
+
+// ... other require statements
+
 exports.createArtist = async (req, res) => {
+  // Keep track of file paths for cleanup
+  const filePaths = [];
+
   try {
     const { name, songName } = req.body;
     const artistData = { name, songName };
@@ -13,6 +20,7 @@ exports.createArtist = async (req, res) => {
     // Upload profileImage using path
     if (req.files?.profileImage?.[0]) {
       const profileImageFile = req.files.profileImage[0];
+      filePaths.push(profileImageFile.path); // Add path for cleanup
       const uploadedImage = await uploadToCloudinary(
         profileImageFile.path,
         profileImageFile.mimetype,
@@ -21,12 +29,17 @@ exports.createArtist = async (req, res) => {
       artistData.profileImage = uploadedImage.secure_url;
     }
 
-    // Upload media using buffer
+    // Upload media using path
     if (req.files?.media?.[0]) {
       const mediaFile = req.files.media[0];
+      filePaths.push(mediaFile.path); // Add path for cleanup
+
+      // **** THIS IS THE FIX ****
+      // Use the path and set usePath to true
       const uploadedMedia = await uploadToCloudinary(
-        mediaFile.buffer,
-        mediaFile.mimetype
+        mediaFile.path,
+        mediaFile.mimetype,
+        true // use path
       );
       artistData.mediaUrl = uploadedMedia.secure_url;
     }
@@ -36,6 +49,16 @@ exports.createArtist = async (req, res) => {
   } catch (err) {
     console.error('Create artist error:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    // **BEST PRACTICE**: Clean up the temporary files from the 'uploads' folder
+    // This block runs whether the try succeeds or fails
+    for (const path of filePaths) {
+      try {
+        await fs.unlink(path);
+      } catch (cleanupErr) {
+        console.error('Error cleaning up temporary file:', path, cleanupErr);
+      }
+    }
   }
 };
 
