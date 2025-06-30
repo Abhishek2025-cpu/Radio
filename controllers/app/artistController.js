@@ -7,7 +7,6 @@ const bcrypt = require('bcryptjs');
 
 
 
-const cloudinary = require('cloudinary').v2;
 
 
 exports.uploadToCloudinary = (buffer, mimetype) => {
