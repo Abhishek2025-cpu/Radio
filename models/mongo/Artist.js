@@ -16,7 +16,10 @@ const artistSchema = new mongoose.Schema({
       }
     ],
     default: [],
+
   },
+
+    mediaUrl: { type: String }, 
   isActive: {
     type: Boolean,
     default: true,

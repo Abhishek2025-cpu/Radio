@@ -18,46 +18,48 @@ const streamUpload = (buffer) => {
   });
 };
 
+
 exports.createArtist = async (req, res) => {
   try {
     const { name, songName } = req.body;
-    let imageUrl = null;
-
-    console.log('Incoming request:', {
-      name,
-      songName,
-      fileExists: !!req.file,
-    });
 
     if (!name || !songName) {
       return res.status(400).json({ error: 'name and songName are required' });
     }
 
-    if (req.file) {
-      try {
-        const result = await streamUpload(req.file.buffer);
-        console.log('Cloudinary upload result:', result);
-        imageUrl = result.secure_url;
-      } catch (uploadErr) {
-        console.error('Cloudinary upload failed:', uploadErr);
-        return res.status(500).json({ error: 'Image upload failed' });
-      }
+    let imageUrl = null;
+    let mediaUrl = null;
+
+    if (req.files?.profileImage?.[0]) {
+      const imageResult = await uploadToCloudinary(
+        req.files.profileImage[0].buffer,
+        req.files.profileImage[0].mimetype
+      );
+      imageUrl = imageResult.secure_url;
+    }
+
+    if (req.files?.media?.[0]) {
+      const mediaResult = await uploadToCloudinary(
+        req.files.media[0].buffer,
+        req.files.media[0].mimetype
+      );
+      mediaUrl = mediaResult.secure_url;
     }
 
     const artist = new Artist({
       name,
       songName,
       profileImage: imageUrl,
+      mediaUrl,
       votes: 0,
       votedIPs: [],
     });
 
     await artist.save();
-
     res.status(201).json(artist);
   } catch (err) {
     console.error('Create artist error:', err);
-    res.status(500).json({ error: 'Internal server error'});
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
