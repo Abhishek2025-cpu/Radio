@@ -64,7 +64,7 @@ exports.createArtist = async (req, res) => {
     res.status(201).json(artist);
   } catch (err) {
     console.error('Create artist error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error',err });
   }
 };
 
