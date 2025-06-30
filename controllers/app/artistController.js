@@ -4,17 +4,25 @@ const ipaddr = require('ipaddr.js');
 const bcrypt = require('bcryptjs');
 
 
-// Utility: Stream upload to Cloudinary
-const streamUpload = (buffer) => {
+
+
+
+const cloudinary = require('cloudinary').v2;
+
+
+exports.uploadToCloudinary = (buffer, mimetype) => {
   return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'artists/profiles' },
-      (error, result) => {
-        if (result) resolve(result);
-        else reject(error);
-      }
-    );
-    stream.end(buffer);
+    const stream = cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (err, result) => {
+      if (err) return reject(err);
+      resolve(result);
+    });
+
+    const { Readable } = require('stream');
+    const readable = new Readable();
+    readable._read = () => {};
+    readable.push(buffer);
+    readable.push(null);
+    readable.pipe(stream);
   });
 };
 
@@ -62,10 +70,15 @@ exports.createArtist = async (req, res) => {
     await artist.save();
 
     res.status(201).json(artist);
-  } catch (err) {
-    console.error('Create artist error:', err);
-    res.status(500).json({ error: 'Internal server error',err });
-  }
+  }  catch (err) {
+  console.error('Create artist error:', {
+    message: err.message,
+    stack: err.stack,
+    full: err,
+  });
+  res.status(500).json({ error: 'Internal server error', err: err.message });
+}
+
 };
 
 
