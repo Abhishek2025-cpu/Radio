@@ -5,60 +5,36 @@ const { uploadToCloudinary } = require('../../utils/cloudinary');
 const ipaddr = require('ipaddr.js');
 const bcrypt = require('bcryptjs');
 
-
-
-
-
-
-
-
-
-
-
 exports.createArtist = async (req, res) => {
   try {
     const { name, songName } = req.body;
+    const artistData = { name, songName };
 
-    if (!name || !songName) {
-      return res.status(400).json({ error: 'name and songName are required' });
-    }
-
-    let imageUrl = null;
-    let mediaUrl = null;
-
-    // Upload profileImage
+    // Check and upload profileImage
     if (req.files?.profileImage?.[0]) {
-      const imageFile = req.files.profileImage[0];
-      console.log("Uploading profileImage:", imageFile.originalname);
-      const imageUploadResult = await uploadToCloudinary(imageFile.buffer, imageFile.mimetype);
-      console.log("Image upload result:", imageUploadResult);
-      imageUrl = imageUploadResult.secure_url;
+      const profileImageFile = req.files.profileImage[0];
+      const uploadedImage = await uploadToCloudinary(
+        profileImageFile.buffer,
+        profileImageFile.mimetype
+      );
+      artistData.profileImage = uploadedImage.secure_url;
     }
 
-    // Upload media
+    // Check and upload media
     if (req.files?.media?.[0]) {
       const mediaFile = req.files.media[0];
-      console.log("Uploading media:", mediaFile.originalname);
-      const mediaUploadResult = await uploadToCloudinary(mediaFile.buffer, mediaFile.mimetype);
-      console.log("Media upload result:", mediaUploadResult);
-      mediaUrl = mediaUploadResult.secure_url;
+      const uploadedMedia = await uploadToCloudinary(
+        mediaFile.buffer,
+        mediaFile.mimetype
+      );
+      artistData.mediaUrl = uploadedMedia.secure_url;
     }
 
-    const artist = new Artist({
-      name,
-      songName,
-      profileImage: imageUrl,
-      mediaUrl: mediaUrl, // ✅ CORRECT field name
-      votes: 0,
-      votedIPs: [],
-    });
-
-    await artist.save();
-
-    res.status(201).json(artist);
+    const newArtist = await Artist.create(artistData);
+    return res.status(201).json(newArtist);
   } catch (err) {
     console.error('Create artist error:', err);
-    res.status(500).json({ error: 'Internal server error', err: err.message });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };
 
