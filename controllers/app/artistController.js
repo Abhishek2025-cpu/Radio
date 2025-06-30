@@ -23,34 +23,32 @@ exports.createArtist = async (req, res) => {
       return res.status(400).json({ error: 'name and songName are required' });
     }
 
-    console.log('Incoming request:', {
-      name,
-      songName,
-      files: req.files,
-    });
-
-    let profileImageUrl = null;
+    let imageUrl = null;
     let mediaUrl = null;
 
     // Upload profileImage
     if (req.files?.profileImage?.[0]) {
       const imageFile = req.files.profileImage[0];
+      console.log("Uploading profileImage:", imageFile.originalname);
       const imageUploadResult = await uploadToCloudinary(imageFile.buffer, imageFile.mimetype);
-      profileImageUrl = imageUploadResult.secure_url;
+      console.log("Image upload result:", imageUploadResult);
+      imageUrl = imageUploadResult.secure_url;
     }
 
-    // Upload media (mp3)
+    // Upload media
     if (req.files?.media?.[0]) {
       const mediaFile = req.files.media[0];
+      console.log("Uploading media:", mediaFile.originalname);
       const mediaUploadResult = await uploadToCloudinary(mediaFile.buffer, mediaFile.mimetype);
+      console.log("Media upload result:", mediaUploadResult);
       mediaUrl = mediaUploadResult.secure_url;
     }
 
     const artist = new Artist({
       name,
       songName,
-      profileImage: profileImageUrl, // ✅ this now sets the correct value
-      mediaUrl,                      // ✅ matches schema
+      profileImage: imageUrl,
+      mediaUrl: mediaUrl, // ✅ CORRECT field name
       votes: 0,
       votedIPs: [],
     });
@@ -59,11 +57,7 @@ exports.createArtist = async (req, res) => {
 
     res.status(201).json(artist);
   } catch (err) {
-    console.error('Create artist error:', {
-      message: err.message,
-      stack: err.stack,
-      full: err,
-    });
+    console.error('Create artist error:', err);
     res.status(500).json({ error: 'Internal server error', err: err.message });
   }
 };
