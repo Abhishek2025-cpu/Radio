@@ -27,35 +27,40 @@ exports.createArtist = async (req, res) => {
       return res.status(400).json({ error: 'name and songName are required' });
     }
 
+    console.log('Incoming request:', {
+      name,
+      songName,
+      files: req.files,
+    });
+
     let imageUrl = null;
     let mediaUrl = null;
 
+    // Upload profileImage
     if (req.files?.profileImage?.[0]) {
-      const imageResult = await uploadToCloudinary(
-        req.files.profileImage[0].buffer,
-        req.files.profileImage[0].mimetype
-      );
-      imageUrl = imageResult.secure_url;
+      const imageFile = req.files.profileImage[0];
+      const imageUploadResult = await uploadToCloudinary(imageFile.buffer, imageFile.mimetype);
+      imageUrl = imageUploadResult.secure_url;
     }
 
+    // Upload media (mp3)
     if (req.files?.media?.[0]) {
-      const mediaResult = await uploadToCloudinary(
-        req.files.media[0].buffer,
-        req.files.media[0].mimetype
-      );
-      mediaUrl = mediaResult.secure_url;
+      const mediaFile = req.files.media[0];
+      const mediaUploadResult = await uploadToCloudinary(mediaFile.buffer, mediaFile.mimetype);
+      mediaUrl = mediaUploadResult.secure_url;
     }
 
     const artist = new Artist({
       name,
       songName,
       profileImage: imageUrl,
-      mediaUrl,
+      media: mediaUrl, // new field in schema
       votes: 0,
       votedIPs: [],
     });
 
     await artist.save();
+
     res.status(201).json(artist);
   } catch (err) {
     console.error('Create artist error:', err);
