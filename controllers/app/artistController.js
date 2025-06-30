@@ -14,6 +14,7 @@ const bcrypt = require('bcryptjs');
 
 
 
+
 exports.createArtist = async (req, res) => {
   try {
     const { name, songName } = req.body;
@@ -28,14 +29,14 @@ exports.createArtist = async (req, res) => {
       files: req.files,
     });
 
-    let imageUrl = null;
+    let profileImageUrl = null;
     let mediaUrl = null;
 
     // Upload profileImage
     if (req.files?.profileImage?.[0]) {
       const imageFile = req.files.profileImage[0];
       const imageUploadResult = await uploadToCloudinary(imageFile.buffer, imageFile.mimetype);
-      imageUrl = imageUploadResult.secure_url;
+      profileImageUrl = imageUploadResult.secure_url;
     }
 
     // Upload media (mp3)
@@ -48,9 +49,8 @@ exports.createArtist = async (req, res) => {
     const artist = new Artist({
       name,
       songName,
-      profileImage: imageUrl,
-mediaUrl: mediaUrl,
-
+      profileImage: profileImageUrl, // ✅ this now sets the correct value
+      mediaUrl,                      // ✅ matches schema
       votes: 0,
       votedIPs: [],
     });
@@ -58,15 +58,14 @@ mediaUrl: mediaUrl,
     await artist.save();
 
     res.status(201).json(artist);
-  }  catch (err) {
-  console.error('Create artist error:', {
-    message: err.message,
-    stack: err.stack,
-    full: err,
-  });
-  res.status(500).json({ error: 'Internal server error', err: err.message });
-}
-
+  } catch (err) {
+    console.error('Create artist error:', {
+      message: err.message,
+      stack: err.stack,
+      full: err,
+    });
+    res.status(500).json({ error: 'Internal server error', err: err.message });
+  }
 };
 
 
