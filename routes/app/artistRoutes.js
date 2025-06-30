@@ -14,6 +14,15 @@ router.post(
   artistController.createArtist
 );
 
+router.patch(
+  '/update-artist/:id',
+  upload.fields([
+    { name: 'profileImage', maxCount: 1 },
+    { name: 'media', maxCount: 1 },
+  ]),
+  artistController.updateArtist // Connect to the new controller function
+);
+
 router.get('/get-all-artists', artistController.getAllArtists);
 router.get('/get-artist/:id', artistController.getArtistById);
 

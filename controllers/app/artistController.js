@@ -67,26 +67,70 @@ exports.createArtist = async (req, res) => {
 
 
 exports.updateArtist = async (req, res) => {
+  const { id } = req.params;
+  const filePaths = []; // To keep track of temp files for cleanup
+
   try {
     const { name, songName } = req.body;
+    const updateData = {};
 
-    const updateData = { name, songName };
+    // Only add fields to the update object if they were provided in the request
+    if (name) updateData.name = name;
+    if (songName) updateData.songName = songName;
 
-    if (req.file) {
-      const upload = await new Promise((resolve, reject) => {
-        cloudinary.uploader.upload_stream({ folder: 'artists/profiles' }, (err, result) => {
-          if (err) return reject(err);
-          resolve(result.secure_url);
-        }).end(req.file.buffer);
-      });
+    // Check for and upload a new profile image
+    if (req.files?.profileImage?.[0]) {
+      const profileImageFile = req.files.profileImage[0];
+      filePaths.push(profileImageFile.path); // Add for cleanup
 
-      updateData.profileImage = upload;
+      const uploadedImage = await uploadToCloudinary(
+        profileImageFile.path,
+        profileImageFile.mimetype,
+        true // use path
+      );
+      updateData.profileImage = uploadedImage.secure_url;
     }
 
-    const updated = await Artist.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    res.status(200).json(updated);
+    // Check for and upload new media
+    if (req.files?.media?.[0]) {
+      const mediaFile = req.files.media[0];
+      filePaths.push(mediaFile.path); // Add for cleanup
+
+      const uploadedMedia = await uploadToCloudinary(
+        mediaFile.path,
+        mediaFile.mimetype,
+        true // use path
+      );
+      updateData.mediaUrl = uploadedMedia.secure_url;
+    }
+
+    // Check if there is anything to update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No update data provided.' });
+    }
+
+    const updatedArtist = await Artist.findByIdAndUpdate(id, updateData, {
+      new: true, // Return the updated document
+      runValidators: true,
+    });
+
+    if (!updatedArtist) {
+      return res.status(404).json({ error: 'Artist not found.' });
+    }
+
+    return res.status(200).json(updatedArtist);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Update artist error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    // **IMPORTANT**: Clean up the temporary files from the 'uploads' folder
+    for (const path of filePaths) {
+      try {
+        await fs.unlink(path);
+      } catch (cleanupErr) {
+        console.error('Error cleaning up temporary file:', path, cleanupErr);
+      }
+    }
   }
 };
 
