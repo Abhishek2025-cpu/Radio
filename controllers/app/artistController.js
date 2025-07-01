@@ -119,18 +119,23 @@ exports.updateArtist = async (req, res) => {
 
     return res.status(200).json(updatedArtist);
   } catch (err) {
-    console.error('Update artist error:', err?.message || err);
-    return res.status(500).json({ error: 'Internal server error', err });
-  } finally {
-    for (const path of filePaths) {
-      try {
-        await fs.unlink(path);
-      } catch (cleanupErr) {
-        console.error('Error cleaning up temporary file:', path, cleanupErr);
-      }
-    }
-  }
-};
+  console.error('Error caught in updateArtist:', err);
+
+  // Force serialization of hidden properties like message and stack
+  const serializedErr = {
+    message: err?.message || 'No message',
+    stack: err?.stack || 'No stack',
+    name: err?.name || 'No name',
+    ...(err?.response?.data && { cloudinaryResponse: err.response.data }),
+  };
+
+  console.error('Serialized error:', serializedErr);
+
+  return res.status(500).json({
+    error: 'Internal server error',
+    err: serializedErr
+  });
+}
 
 
 // Read
