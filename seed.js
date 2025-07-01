@@ -1,7 +1,7 @@
 require('dotenv').config();
-const connectDB = require('./db');
-const Station = require('./models/Station');
-const SongCoverOverride = require('./models/SongCoverOverride');
+const connectDB = require('./config/db.mongo');
+const Station = require('./models/mongo/Station');
+const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 
 // Connect to DB
 connectDB();
