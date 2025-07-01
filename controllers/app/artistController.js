@@ -121,7 +121,7 @@ exports.updateArtist = async (req, res) => {
     return res.status(200).json(updatedArtist);
   } catch (err) {
     console.error('Update artist error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error',err });
   } finally {
     // **IMPORTANT**: Clean up the temporary files from the 'uploads' folder
     for (const path of filePaths) {
