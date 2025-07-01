@@ -68,82 +68,34 @@ exports.createArtist = async (req, res) => {
 
 
 exports.updateArtist = async (req, res) => {
-  const { id } = req.params;
-  const filePaths = [];
-
   try {
-    const { name, songName } = req.body;
+    console.log('BODY:', req.body);  // Optional fields like name, votes
+    console.log('FILES:', req.files); // Will include profileImage and songName
+
+    const { name } = req.body || {}; // optional if you're updating name
+
+    const profileImage = req.files?.profileImage?.[0]; // image file
+    const songFile = req.files?.songName?.[0]; // mp3 file
+
+    if (!profileImage && !songFile && !name) {
+      return res.status(400).json({ error: 'No update fields provided.' });
+    }
+
+    // Build update object
     const updateData = {};
-
     if (name) updateData.name = name;
-    if (songName) updateData.songName = songName;
+    if (profileImage) updateData.profileImageUrl = `/uploads/${profileImage.filename}`;
+    if (songFile) updateData.songFileUrl = `/uploads/${songFile.filename}`;
 
-    console.log('Files received:', req.files);
-
-    if (req.files?.profileImage?.[0]) {
-      const profileImageFile = req.files.profileImage[0];
-      filePaths.push(profileImageFile.path);
-
-      const uploadedImage = await uploadToCloudinary(
-        profileImageFile.path,
-        profileImageFile.mimetype,
-        true
-      );
-      updateData.profileImage = uploadedImage.secure_url;
-    }
-
-    if (req.files?.media?.[0]) {
-      const mediaFile = req.files.media[0];
-      filePaths.push(mediaFile.path);
-
-      const uploadedMedia = await uploadToCloudinary(
-        mediaFile.path,
-        mediaFile.mimetype,
-        true
-      );
-      updateData.mediaUrl = uploadedMedia.secure_url;
-    }
-
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({ error: 'No update data provided.' });
-    }
-
-    const updatedArtist = await Artist.findByIdAndUpdate(id, updateData, {
+    // Perform the update
+    const updated = await Artist.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
-      runValidators: true,
     });
 
-    if (!updatedArtist) {
-      return res.status(404).json({ error: 'Artist not found.' });
-    }
-
-    return res.status(200).json(updatedArtist);
-  }  catch (err) {
-  console.error('Error caught in updateArtist:', err);
-
-  // Force serialization of hidden properties like message and stack
-  const serializedErr = {
-    message: err?.message || 'No message',
-    stack: err?.stack || 'No stack',
-    name: err?.name || 'No name',
-    ...(err?.response?.data && { cloudinaryResponse: err.response.data }),
-  };
-
-  console.error('Serialized error:', serializedErr);
-
-  return res.status(500).json({
-    error: 'Internal server error',
-    err: serializedErr
-  });
-}
- finally {
-    for (const path of filePaths) {
-      try {
-        await fs.unlink(path);
-      } catch (cleanupErr) {
-        console.error('Error cleaning up temporary file:', path, cleanupErr);
-      }
-    }
+    res.status(200).json({ success: true, updated });
+  } catch (err) {
+    console.error('Error in updateArtist:', err);
+    res.status(500).json({ error: 'Internal server error', err });
   }
 };
 
