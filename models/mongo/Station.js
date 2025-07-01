@@ -26,6 +26,10 @@ const stationSchema = new mongoose.Schema({
     type: String,
     default: '',
   },
+    isVisible: {
+    type: Boolean,
+    default: true, // Stations are visible by default when created
+  },
   color: {
     type: String,
     default: '#FFFFFF',
