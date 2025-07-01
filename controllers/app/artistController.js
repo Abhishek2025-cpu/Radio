@@ -1,5 +1,6 @@
 const Artist = require('../../models/mongo/Artist');
 const { uploadToCloudinary } = require('../../utils/cloudinary');
+const fs = require('fs').promises;
 
 
 const ipaddr = require('ipaddr.js');
@@ -68,49 +69,47 @@ exports.createArtist = async (req, res) => {
 
 exports.updateArtist = async (req, res) => {
   const { id } = req.params;
-  const filePaths = []; // To keep track of temp files for cleanup
+  const filePaths = [];
 
   try {
     const { name, songName } = req.body;
     const updateData = {};
 
-    // Only add fields to the update object if they were provided in the request
     if (name) updateData.name = name;
     if (songName) updateData.songName = songName;
 
-    // Check for and upload a new profile image
+    console.log('Files received:', req.files);
+
     if (req.files?.profileImage?.[0]) {
       const profileImageFile = req.files.profileImage[0];
-      filePaths.push(profileImageFile.path); // Add for cleanup
+      filePaths.push(profileImageFile.path);
 
       const uploadedImage = await uploadToCloudinary(
         profileImageFile.path,
         profileImageFile.mimetype,
-        true // use path
+        true
       );
       updateData.profileImage = uploadedImage.secure_url;
     }
 
-    // Check for and upload new media
     if (req.files?.media?.[0]) {
       const mediaFile = req.files.media[0];
-      filePaths.push(mediaFile.path); // Add for cleanup
+      filePaths.push(mediaFile.path);
 
       const uploadedMedia = await uploadToCloudinary(
         mediaFile.path,
         mediaFile.mimetype,
-        true // use path
+        true
       );
       updateData.mediaUrl = uploadedMedia.secure_url;
     }
 
-    // Check if there is anything to update
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'No update data provided.' });
     }
 
     const updatedArtist = await Artist.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
+      new: true,
       runValidators: true,
     });
 
@@ -120,10 +119,9 @@ exports.updateArtist = async (req, res) => {
 
     return res.status(200).json(updatedArtist);
   } catch (err) {
-    console.error('Update artist error:', err);
-    return res.status(500).json({ error: 'Internal server error',err });
+    console.error('Update artist error:', err?.message || err);
+    return res.status(500).json({ error: 'Internal server error', err });
   } finally {
-    // **IMPORTANT**: Clean up the temporary files from the 'uploads' folder
     for (const path of filePaths) {
       try {
         await fs.unlink(path);
