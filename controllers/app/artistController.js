@@ -118,7 +118,7 @@ exports.updateArtist = async (req, res) => {
     }
 
     return res.status(200).json(updatedArtist);
-  } catch (err) {
+  }  catch (err) {
   console.error('Error caught in updateArtist:', err);
 
   // Force serialization of hidden properties like message and stack
@@ -136,6 +136,16 @@ exports.updateArtist = async (req, res) => {
     err: serializedErr
   });
 }
+ finally {
+    for (const path of filePaths) {
+      try {
+        await fs.unlink(path);
+      } catch (cleanupErr) {
+        console.error('Error cleaning up temporary file:', path, cleanupErr);
+      }
+    }
+  }
+};
 
 
 // Read
