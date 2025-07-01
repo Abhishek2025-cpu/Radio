@@ -26,7 +26,7 @@ const createSongKey = (artist, title) => {
 // --- API ROUTES ---
 
 // GET /api/stations -> Get a list of all stations from our DB
-app.get('/api/stations', async (req, res) => {
+app.get('/api/station', async (req, res) => {
   try {
     const stations = await Station.find().select('-infomaniakUrl'); // Hide infomaniakUrl
     res.json(stations);
