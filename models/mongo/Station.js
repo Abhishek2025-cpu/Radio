@@ -1,12 +1,35 @@
 const mongoose = require('mongoose');
 
 const stationSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  streamUrl: { type: String, required: true },
-  metadataUrl: { type: String, required: true },
-  thumbnail_image: { type: String },  // Cloudinary image URL
-  color: { type: String },
-  song_cover: { type: String },       // Admin override for cover image
-}, { timestamps: true });
+  // e.g., "U80", "U90". We use this for easy lookups.
+  stationId: {
+    type: String,
+    required: true,
+    unique: true,
+    uppercase: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  // The URL to get live data
+  infomaniakUrl: {
+    type: String,
+    required: true,
+  },
+  // --- YOUR CUSTOM OVERRIDE FIELDS ---
+  customStreamUrl: {
+    type: String,
+    required: true,
+  },
+  thumbnailUrl: {
+    type: String,
+    default: '',
+  },
+  color: {
+    type: String,
+    default: '#FFFFFF',
+  }
+});
 
 module.exports = mongoose.model('Station', stationSchema);
