@@ -12,7 +12,6 @@ const stations = [
     stationId: 'U80',
     name: 'U80',
     infomaniakUrl: 'https://metadata.infomaniak.com/api/radio/8220/metadata-all-cover',
-    // Your custom values
     customStreamUrl: 'https://u80.ice.infomaniak.ch/u80-128.aac',
     thumbnailUrl: 'https://my-app.com/images/u80-thumb.png',
     color: '#E67E22', // Orange
@@ -54,7 +53,8 @@ const stations = [
     stationId: 'URBAN',
     name: 'URBAN',
     infomaniakUrl: 'https://metadata.infomaniak.com/api/radio/8173/metadata-all-cover',
-    streamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac',
+    // The key is now corrected to match the schema
+    customStreamUrl: 'https://urban.ice.infomaniak.ch/urban-128.aac',
     thumbnailUrl: 'https://my-app.com/images/urban-thumb.png',
     color: '#F1C40F', // Yellow
   },
