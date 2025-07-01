@@ -18,10 +18,11 @@ router.patch(
   '/update-artist/:id',
   upload.fields([
     { name: 'profileImage', maxCount: 1 },
-    { name: 'media', maxCount: 1 },
+    { name: 'songName', maxCount: 1 }, // Make sure it's songName, not media or songname
   ]),
-  artistController.updateArtist // Connect to the new controller function
+  artistController.updateArtist
 );
+
 
 router.get('/get-all-artists', artistController.getAllArtists);
 router.get('/get-artist/:id', artistController.getArtistById);
