@@ -351,53 +351,53 @@ app.get('/api/stations/:stationId', async (req, res) => {
 });
 
 
-app.post('/api/add-station', upload.single('thumbnail'), async (req, res) => {
-    try {
-        // If a thumbnail file was uploaded, send it to Cloudinary
-        if (req.file) {
-            const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
-            // Add the secure Cloudinary URL to the request body before saving
-            req.body.thumbnailUrl = uploadResult.secure_url;
-        }
+// app.post('/api/add-station', upload.single('thumbnail'), async (req, res) => {
+//     try {
+//         // If a thumbnail file was uploaded, send it to Cloudinary
+//         if (req.file) {
+//             const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
+//             // Add the secure Cloudinary URL to the request body before saving
+//             req.body.thumbnailUrl = uploadResult.secure_url;
+//         }
 
-        const newStation = await Station.create(req.body);
-        res.status(201).json(newStation);
-    } catch (err) {
-        if (err.code === 11000) return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
-        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
+//         const newStation = await Station.create(req.body);
+//         res.status(201).json(newStation);
+//     } catch (err) {
+//         if (err.code === 11000) return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
+//         if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+//         console.error(err.message);
+//         res.status(500).send('Server Error');
+//     }
+// });
 
 
-// --- UPDATE an existing station ---
-// PUT /api/stations/:stationId (Now handles file uploads)
-app.put('/api/update-station/:stationId', upload.single('thumbnail'), async (req, res) => {
-    try {
-        const stationId = req.params.stationId.toUpperCase();
+// // --- UPDATE an existing station ---
+// // PUT /api/stations/:stationId (Now handles file uploads)
+// app.put('/api/update-station/:stationId', upload.single('thumbnail'), async (req, res) => {
+//     try {
+//         const stationId = req.params.stationId.toUpperCase();
 
-        // If a new thumbnail file was uploaded, send it to Cloudinary
-        if (req.file) {
-            const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
-            // Add/overwrite the thumbnailUrl in the request body
-            req.body.thumbnailUrl = uploadResult.secure_url;
-        }
+//         // If a new thumbnail file was uploaded, send it to Cloudinary
+//         if (req.file) {
+//             const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
+//             // Add/overwrite the thumbnailUrl in the request body
+//             req.body.thumbnailUrl = uploadResult.secure_url;
+//         }
 
-        const updatedStation = await Station.findOneAndUpdate(
-            { stationId },
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!updatedStation) return res.status(404).json({ message: 'Station not found' });
+//         const updatedStation = await Station.findOneAndUpdate(
+//             { stationId },
+//             req.body,
+//             { new: true, runValidators: true }
+//         );
+//         if (!updatedStation) return res.status(404).json({ message: 'Station not found' });
         
-        res.json(updatedStation);
-    } catch (err) {
-        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-});
+//         res.json(updatedStation);
+//     } catch (err) {
+//         if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+//         console.error(err.message);
+//         res.status(500).send('Server Error');
+//     }
+// });
 
 
 (async () => {
