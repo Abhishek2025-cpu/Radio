@@ -16,10 +16,11 @@ router.post(
 
 router.patch(
   '/update-artist/:id',
-  upload.fields([
-    { name: 'profileImage', maxCount: 1 },
-    { name: 'songName', maxCount: 1 }, // Make sure it's songName, not media or songname
-  ]),
+upload.fields([
+  { name: 'profileImage', maxCount: 1 },
+  { name: 'songName', maxCount: 1 } // ✅ must be exactly 'songName'
+]),
+
   artistController.updateArtist
 );
 
