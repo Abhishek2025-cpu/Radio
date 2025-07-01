@@ -1,6 +1,7 @@
 const Artist = require('../../models/mongo/Artist');
 const { uploadToCloudinary } = require('../../utils/cloudinary');
 const fs = require('fs').promises;
+const path = require('path');
 
 
 const ipaddr = require('ipaddr.js');
@@ -69,28 +70,35 @@ exports.createArtist = async (req, res) => {
 
 exports.updateArtist = async (req, res) => {
   try {
-    console.log('BODY:', req.body);  // Optional fields like name, votes
-    console.log('FILES:', req.files); // Will include profileImage and songName
+    const updateData = {};
 
-    const { name } = req.body || {}; // optional if you're updating name
+    // Handle optional text field
+    if (req.body?.name) {
+      updateData.name = req.body.name;
+    }
 
-    const profileImage = req.files?.profileImage?.[0]; // image file
-    const songFile = req.files?.songName?.[0]; // mp3 file
+    // Handle optional file fields
+    if (req.files?.profileImage?.[0]) {
+      updateData.profileImageUrl = `/uploads/${req.files.profileImage[0].filename}`;
+    }
 
-    if (!profileImage && !songFile && !name) {
+    if (req.files?.songName?.[0]) {
+      updateData.songFileUrl = `/uploads/${req.files.songName[0].filename}`;
+    }
+
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: 'No update fields provided.' });
     }
 
-    // Build update object
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (profileImage) updateData.profileImageUrl = `/uploads/${profileImage.filename}`;
-    if (songFile) updateData.songFileUrl = `/uploads/${songFile.filename}`;
-
-    // Perform the update
+    // Proceed to update
     const updated = await Artist.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
     });
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Artist not found.' });
+    }
 
     res.status(200).json({ success: true, updated });
   } catch (err) {
@@ -98,6 +106,7 @@ exports.updateArtist = async (req, res) => {
     res.status(500).json({ error: 'Internal server error', err });
   }
 };
+
 
 
 // Read
