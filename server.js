@@ -11,7 +11,7 @@ const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 
 const PORT = process.env.PORT || 2026;
 // Initialize App
-const app = express();
+
 app.use(express.json());
 
 // Connect to Database
