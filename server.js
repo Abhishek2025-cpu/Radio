@@ -214,42 +214,39 @@ app.get('/api/station/all', async (req, res) => {
         // 1. Fetch all station documents from your database
         const stationsFromDB = await Station.find().sort({ createdAt: -1 });
 
-        // 2. Create an array of promises to fetch live metadata for each station in parallel
+        // 2. Create an array of promises to fetch live metadata for each station
         const updatePromises = stationsFromDB.map(async (station) => {
+            // Convert to a plain object to avoid Mongoose issues when modifying
+            const stationObject = station.toObject();
+
             try {
                 // Make a live API call to the station's metadata URL
-                const metadataResponse = await axios.get(station.infomaniakUrl);
+                const metadataResponse = await axios.get(station.infomaniakUrl, { timeout: 5000 }); // Added a 5-second timeout
 
-                // Convert the Mongoose document to a plain JavaScript object to modify it
-                const stationObject = station.toObject();
-
-                // Inject the fresh 'nowPlaying' data from the API response
-                if (metadataResponse.data && metadataResponse.data.nowPlaying) {
-                    stationObject.nowPlaying = metadataResponse.data.nowPlaying;
-                } else {
-                    stationObject.nowPlaying = []; // Default to empty if data is missing
-                }
+                // Inject the fresh 'nowPlaying' data. Wrap it in an array.
+                const nowPlayingData = metadataResponse.data?.nowPlaying;
+                stationObject.nowPlaying = nowPlayingData ? [nowPlayingData] : [];
                 
                 return stationObject;
 
             } catch (error) {
-                // IMPORTANT: If a single API call fails, don't crash the whole request.
-                // Instead, log the error and return the station with its stale data.
-                console.warn(`Could not fetch live metadata for ${station.name}: ${error.message}`);
-                const stationObject = station.toObject();
-                stationObject.nowPlaying = stationObject.nowPlaying || []; // Keep old data or default to empty
+                // THIS IS THE MOST IMPORTANT PART FOR DEBUGGING
+                console.warn(`[API FALLBACK] Could not fetch live metadata for ${station.name}. Reason: ${error.message}. Returning stale data from DB.`);
+                
+                // On failure, return the station with its existing (stale) data.
+                // The 'nowPlaying' field is already on stationObject from the DB.
                 return stationObject;
             }
         });
 
-        // 3. Wait for all the parallel API calls to complete
+        // 3. Wait for all the parallel API calls to complete (or fail gracefully)
         const liveStations = await Promise.all(updatePromises);
 
-        // 4. Send the updated list of stations with live data to the client
+        // 4. Send the updated list of stations
         res.json(liveStations);
 
     } catch (err) {
-        console.error('Error in /api/station/all route:', err.message);
+        console.error('Fatal error in /api/station/all route:', err.message);
         res.status(500).send('Server Error');
     }
 });

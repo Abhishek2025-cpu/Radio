@@ -1,12 +1,10 @@
+// File: scripts/importData.js
+
 require('dotenv').config();
-const connectDB = require('./config/db.mongo');
-const Station = require('./models/mongo/Station');
-const SongCoverOverride = require('./models/mongo/SongCoverOverride');
-
-// Connect to DB
-connectDB();
-
-
+const axios = require('axios');
+const connectDB = require('../config/db.mongo'); // Adjust path if needed
+const Station = require('../models/mongo/Station'); // Adjust path if needed
+const SongCoverOverride = require('../models/mongo/SongCoverOverride'); // Adjust path if needed
 
 // Connect to DB
 connectDB();
@@ -62,7 +60,6 @@ const stations = [
   },
 ];
 
-// This part remains the same
 const songOverrides = [
     {
         songKey: 'queen_another_one_bites_the_dust',
@@ -72,44 +69,56 @@ const songOverrides = [
     }
 ];
 
-const axios = require('axios');
-
 const importData = async () => {
   try {
+    console.log('Clearing existing data...');
     await Station.deleteMany();
     await SongCoverOverride.deleteMany();
+    console.log('Data cleared.');
 
-    const insertedStations = await Station.insertMany(stations);
+    console.log('Inserting base station data...');
+    const stationDocs = stations.map(s => ({ ...s, nowPlaying: [] })); // Start with empty nowPlaying
+    await Station.insertMany(stationDocs);
+    await SongCoverOverride.insertMany(songOverrides);
+    console.log('Base data inserted successfully.');
 
     // Fetch and inject nowPlaying data
- // Inside your importData script's for loop:
-for (const station of insertedStations) {
-  try {
-    const res = await axios.get(station.infomaniakUrl);
-    
-    // The data is inside the 'nowPlaying' property of the response
-    const nowPlayingData = res.data.nowPlaying || [];
+    console.log('Fetching live metadata for each station...');
+    const allStations = await Station.find(); // Get all stations we just inserted
 
-    await Station.updateOne(
-      { _id: station._id },
-      { $set: { nowPlaying: nowPlayingData } } // Directly set the nowPlaying array
-    );
-  } catch (metaErr) {
-    console.warn(`Could not fetch metadata for ${station.name} during import: ${metaErr.message}`);
-    // Optional: set nowPlaying to empty array on failure during import
-    await Station.updateOne({ _id: station._id }, { $set: { nowPlaying: [] } });
-  }
-}
+    for (const station of allStations) {
+      try {
+        const res = await axios.get(station.infomaniakUrl);
+        
+        // The API returns a 'nowPlaying' object. We'll put it in an array.
+        const nowPlayingObject = res.data?.nowPlaying;
 
-    await SongCoverOverride.insertMany(songOverrides);
-    console.log('✅ Data fixed and re-imported successfully!');
+        if (nowPlayingObject && nowPlayingObject.id) {
+          // If we got valid data, update the station
+          await Station.updateOne(
+            { _id: station._id },
+            // Wrap the object in an array to match the schema
+            { $set: { nowPlaying: [nowPlayingObject] } } 
+          );
+          console.log(`✅ Metadata updated for ${station.name}`);
+        } else {
+          // If API returns no song, ensure it's an empty array
+          await Station.updateOne({ _id: station._id }, { $set: { nowPlaying: [] } });
+          console.warn(`⚠️ No "nowPlaying" data found for ${station.name}, setting to empty array.`);
+        }
+      } catch (metaErr) {
+        console.error(`❌ Could not fetch metadata for ${station.name}: ${metaErr.message}`);
+        // Leave nowPlaying as the default empty array on failure
+      }
+    }
+
+    console.log('\nData import process finished!');
     process.exit();
   } catch (error) {
-    console.error(`❌ Error importing data: ${error}`);
+    console.error(`❌ Fatal error during data import: ${error}`);
     process.exit(1);
   }
 };
-
 
 // Run the script
 importData();
