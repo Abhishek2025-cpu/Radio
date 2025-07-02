@@ -208,38 +208,27 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
 
 // --- READ all stations (for admin backoffice) ---
 
-
+// This is the new ADMIN-ONLY API for your control panel.
+// It fetches ALL stations so you can manage their visibility.
 app.get('/api/station/all', async (req, res) => {
     try {
-        const stationsFromDB = await Station.find({ isVisible: true }).sort({ name: 1 });
+        // The key difference: .find({}) gets ALL stations, regardless of visibility.
+        const stationsFromDB = await Station.find({}).sort({ name: 1 });
 
         const updatePromises = stationsFromDB.map(async (station) => {
             const stationObject = station.toObject();
-
             try {
+                // The rest of the logic is the same: fetch the live metadata.
                 const metadataResponse = await axios.get(station.infomaniakUrl, { timeout: 5000 });
-
-                // --- START OF THE FIX ---
-
-                // 1. Get the song history array from the `data` key.
                 const songHistory = metadataResponse.data?.data;
-
-                // 2. Find the first *valid* song in the history (not a jingle or empty title).
                 const currentSong = songHistory?.find(song => 
                     song.title && song.title.trim().length > 1 && song.title.trim() !== '-'
                 );
-
-                // 3. If a valid song is found, put it in the nowPlaying array. Otherwise, it's an empty array.
                 stationObject.nowPlaying = currentSong ? [currentSong] : [];
-
-                // --- END OF THE FIX ---
-                
                 return stationObject;
-
             } catch (error) {
-                // This part is still important for handling network errors.
                 console.warn(`[API FALLBACK] Could not fetch live metadata for ${station.name}. Reason: ${error.message}.`);
-                return stationObject; // Return stale data from DB on failure.
+                return stationObject;
             }
         });
 
@@ -247,7 +236,7 @@ app.get('/api/station/all', async (req, res) => {
         res.json(liveStations);
 
     } catch (err) {
-        console.error('Fatal error in /api/station/all route:', err.message);
+        console.error('Fatal error in /api/admin/station/all route:', err.message);
         res.status(500).send('Server Error');
     }
 });
