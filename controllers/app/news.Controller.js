@@ -1,10 +1,7 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
- const { uploadToCloudinary } = require('../../utils/cloudinary');
+const { uploadToCloudinary } = require('../../utils/cloudinary');
 
-
-
-// This function is CORRECT and does not need changes.
 exports.createNews = async (req, res) => {
   try {
     const { author, heading, paragraph, subParagraph } = req.body;
@@ -16,36 +13,44 @@ exports.createNews = async (req, res) => {
     const imageUrls = [];
     const audioUrls = [];
     const videoUrls = [];
+
     const mediaFiles = req.files || [];
 
-    for (const file of mediaFiles) {
-      try {
-        const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
-        const fileUrl = uploadResult.secure_url;
+    if (!Array.isArray(mediaFiles) || mediaFiles.length === 0) {
+      console.warn("⚠️ No media files found in request.");
+    } else {
+      for (const file of mediaFiles) {
+        try {
+          const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
+          const fileUrl = uploadResult.secure_url;
 
-        if (uploadResult.resource_type === 'image') {
-          imageUrls.push(fileUrl);
-        } else if (uploadResult.resource_type === 'video') {
-          if (file.mimetype.startsWith('audio/')) {
-            audioUrls.push(fileUrl);
-          } else {
-            videoUrls.push(fileUrl);
+          // Log resource type and MIME type for debugging
+          console.log(`📁 Uploaded: ${file.originalname}, Type: ${uploadResult.resource_type}, MIME: ${file.mimetype}`);
+
+          if (uploadResult.resource_type === 'image') {
+            imageUrls.push(fileUrl);
+          } else if (uploadResult.resource_type === 'video') {
+            if (file.mimetype.startsWith('audio/')) {
+              audioUrls.push(fileUrl);
+            } else {
+              videoUrls.push(fileUrl);
+            }
           }
+        } catch (uploadError) {
+          console.error("❌ Cloudinary upload failed:", uploadError);
         }
-      } catch (uploadError) {
-        console.error("❌ Cloudinary upload failed:", uploadError);
       }
     }
 
-    // Save to DB
     const newEntry = await News.create({
       author,
       heading,
-      paragraph: splitTextByCharLength(paragraph),
-      subParagraph: subParagraph ? splitTextByCharLength(subParagraph) : [],
-      images: imageUrls,
-      videos: videoUrls,
-      audios: audioUrls,
+      paragraphChunks: splitTextByCharLength(paragraph),
+      subParagraphChunks: subParagraph ? splitTextByCharLength(subParagraph) : [],
+      imageUrls,
+      audioUrls,
+      videoUrls,
+      visible: true,
     });
 
     return res.status(201).json({ message: 'News created successfully.', news: newEntry });
@@ -54,6 +59,7 @@ exports.createNews = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 };
+
 
 // --- THIS IS THE FIXED FUNCTION ---
 exports.updateNews = async (req, res) => {
