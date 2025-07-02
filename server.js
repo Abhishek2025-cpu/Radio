@@ -11,8 +11,7 @@ const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 const { uploadToCloudinary } = require('./utils/cloudinary'); 
 
 const storage = multer.memoryStorage();
-const upload = require('./middlewares/upload'); // import this
-
+const upload = multer({ storage: storage });
 
 
 
@@ -156,74 +155,55 @@ app.get('/api/stations/:stationId', async (req, res) => {
 
 
 app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
-    // =========================================================================
-    // START: CRITICAL DEBUGGING LOGS
-    // =========================================================================
-    console.log('--- Received new /api/create-station request ---');
-    console.log('1. Checking for uploaded file (req.file):');
-    console.log(req.file); // <-- This will be undefined if the file isn't being received.
-    
-    console.log('\n2. Checking form-data body (req.body):');
-    console.log(req.body); // <-- Check if all your text fields are arriving correctly.
-    // =========================================================================
-    // END: CRITICAL DEBUGGING LOGS
-    // =========================================================================
-
     try {
+        // Create a mutable copy of the body to add/modify properties
         const stationData = { ...req.body };
 
-        // 1. Handle Thumbnail Upload
+        // 1. Handle Thumbnail Upload: Multer-Cloudinary automatically provides the URL
         if (req.file) {
-            console.log(`✅ File received: ${req.file.originalname}. Path from Cloudinary: ${req.file.path}`);
+            // The `path` from multer-storage-cloudinary is the secure URL
             stationData.thumbnailUrl = req.file.path;
-        } else {
-            console.warn('⚠️ No file was uploaded with the request.');
         }
 
         // 2. Fetch Live Metadata from Infomaniak URL
         if (stationData.infomaniakUrl) {
-            console.log(`\n3. Fetching metadata from: ${stationData.infomaniakUrl}`);
             try {
                 const metadataResponse = await axios.get(stationData.infomaniakUrl);
-
-                // DEBUG: Log the entire structure of the received data
-                console.log('--- Infomaniak API Response Data ---');
-                console.log(JSON.stringify(metadataResponse.data, null, 2));
-                
                 if (metadataResponse.data && metadataResponse.data.nowPlaying) {
                     stationData.nowPlaying = metadataResponse.data.nowPlaying;
-                    console.log(`✅ Successfully fetched and assigned 'nowPlaying' data.`);
+                    console.log(`Successfully fetched metadata for ${stationData.name || stationData.stationId}`);
                 } else {
-                    console.warn("⚠️ Metadata was fetched, but the response did not contain a 'nowPlaying' field.");
-                    stationData.nowPlaying = [];
+                    console.warn(`Metadata from ${stationData.infomaniakUrl} was fetched but did not contain a 'nowPlaying' field.`);
+                    stationData.nowPlaying = []; // Default to empty array
                 }
             } catch (fetchError) {
-                console.error("❌ ERROR fetching metadata from Infomaniak:", fetchError.message);
-                stationData.nowPlaying = [];
+                // Log the error but allow station creation to proceed
+                console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
+                stationData.nowPlaying = []; // Default to empty array on failure
             }
         }
 
         // 3. Create the Station in the Database
-        console.log('\n4. Attempting to create station with this data:');
-        console.log(stationData);
         const newStation = await Station.create(stationData);
 
         // 4. Send Success Response
-        console.log('\n✅ Station created successfully in database.');
         res.status(201).json(newStation);
 
     } catch (err) {
-        // Handle Errors
+        // Handle Database and Validation Errors
         if (err.code === 11000) {
             return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
         }
         if (err.name === 'ValidationError') {
             return res.status(400).json({ message: err.message });
         }
-        console.error('❌ An unexpected server error occurred during station creation:', err);
+
+        // Handle Generic Server Errors
+        console.error('An unexpected error occurred:', err);
         res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
+
 
 
 // --- READ all stations (for admin backoffice) ---
