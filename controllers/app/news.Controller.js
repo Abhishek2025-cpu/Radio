@@ -19,14 +19,24 @@ exports.createNews = async (req, res) => {
   const mediaFiles = req.files || [];
 
 for (const file of mediaFiles) {
-  if (file.mimetype.startsWith('image/')) {
-    imageUrls.push({ url: file.path, type: 'image' });
-  } else if (file.mimetype.startsWith('audio/')) {
-    audioUrls.push({ url: file.path, type: 'audio' });
-  } else if (file.mimetype.startsWith('video/')) {
-    videoUrls.push({ url: file.path, type: 'video' });
+  try {
+    const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
+    const fileUrl = uploadResult.secure_url;
+
+    if (uploadResult.resource_type === 'image') {
+      imageUrls.push(fileUrl);
+    } else if (uploadResult.resource_type === 'video') {
+      if (file.mimetype.startsWith('audio/')) {
+        audioUrls.push(fileUrl);
+      } else {
+        videoUrls.push(fileUrl);
+      }
+    }
+  } catch (uploadError) {
+    console.error("❌ Cloudinary upload failed for one of the files:", uploadError);
   }
 }
+
 
     // --- THIS IS THE CORRECTED FILE HANDLING LOGIC ---
     // We loop through each file and manually upload its buffer to get a real URL
