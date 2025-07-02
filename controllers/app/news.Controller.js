@@ -16,45 +16,16 @@ exports.createNews = async (req, res) => {
     const imageUrls = [];
     const audioUrls = [];
     const videoUrls = [];
- const mediaFiles = req.files || [];
+    const mediaFiles = req.files || [];
 
-for (const file of mediaFiles) {
-  try {
-    const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
-    const fileUrl = uploadResult.secure_url;
-
-    if (uploadResult.resource_type === 'image') {
-      imageUrls.push(fileUrl);
-    } else if (uploadResult.resource_type === 'video') {
-      if (file.mimetype.startsWith('audio/')) {
-        audioUrls.push(fileUrl);
-      } else {
-        videoUrls.push(fileUrl);
-      }
-    }
-  } catch (uploadError) {
-    console.error("❌ Cloudinary upload failed for one of the files:", uploadError);
-  }
-}
-
-
-
-    // --- THIS IS THE CORRECTED FILE HANDLING LOGIC ---
-    // We loop through each file and manually upload its buffer to get a real URL
-    for (const file of files) {
+    for (const file of mediaFiles) {
       try {
-        // 1. Upload the file buffer using our helper
         const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
-        
-        // 2. Get the real, secure URL from the result
         const fileUrl = uploadResult.secure_url;
 
-        // 3. Push the REAL URL into the correct array
         if (uploadResult.resource_type === 'image') {
           imageUrls.push(fileUrl);
         } else if (uploadResult.resource_type === 'video') {
-          // Cloudinary classifies audio as a 'video' resource type.
-          // We can distinguish them using the original mimetype.
           if (file.mimetype.startsWith('audio/')) {
             audioUrls.push(fileUrl);
           } else {
@@ -62,37 +33,28 @@ for (const file of mediaFiles) {
           }
         }
       } catch (uploadError) {
-        console.error("❌ Cloudinary upload failed for one of the files:", uploadError);
-        // Decide how to handle a single failed upload. For now, we'll just skip it.
+        console.error("❌ Cloudinary upload failed:", uploadError);
       }
     }
 
-    console.log("🖼️ Final Image URLs:", imageUrls);
-    console.log("🔊 Final Audio URLs:", audioUrls);
-    console.log("📹 Final Video URLs:", videoUrls);
-
-    // The rest of your code remains the same
-    const paragraphChunks = splitTextByCharLength(paragraph);
-    const subParagraphChunks = splitTextByCharLength(subParagraph || '');
-
-    const dataToSave = {
+    // Save to DB
+    const newEntry = await News.create({
       author,
       heading,
-      paragraphChunks,
-      subParagraphChunks,
-      imageUrls,
-      audioUrls,
-      videoUrls,
-    };
+      paragraph: splitTextByCharLength(paragraph),
+      subParagraph: subParagraph ? splitTextByCharLength(subParagraph) : [],
+      images: imageUrls,
+      videos: videoUrls,
+      audios: audioUrls,
+    });
 
-    const newNews = await News.create(dataToSave);
-    res.status(201).json({ message: "News created successfully", data: newNews });
-
-  } catch (error) {
-    console.error("❌ Fatal Error in createNews:", error);
-    res.status(500).json({ error: "Internal Server Error", message: error.message });
+    return res.status(201).json({ message: 'News created successfully.', news: newEntry });
+  } catch (err) {
+    console.error("❌ Error in createNews:", err);
+    return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 };
+
 // --- THIS IS THE FIXED FUNCTION ---
 exports.updateNews = async (req, res) => {
   try {
