@@ -245,55 +245,102 @@ const applyMetadataMapping = (liveData, mapping) => {
 // --- API ROUTES ---
 
 // GET /api/stations -> Get a list of all stations from our DB
+// app.get('/api/station', async (req, res) => {
+//   try {
+//     // 1. Get all stations from our database
+//     const stationsFromDB = await Station.find();
+
+//     if (!stationsFromDB || stationsFromDB.length === 0) {
+//       return res.json([]);
+//     }
+
+//     // 2. Create an array of promises, one for each station's metadata fetch
+//     const stationDataPromises = stationsFromDB.map(async (station) => {
+//       try {
+//         // Fetch live data for this specific station
+//         const response = await fetch(station.infomaniakUrl);
+//         if (!response.ok) {
+//             // If one station fails, don't crash the whole API.
+//             // Log the error and return a default "now playing" state.
+//             console.error(`Failed to fetch metadata for ${station.name}: ${response.statusText}`);
+//             return { ...station.toObject(), nowPlaying: { status: 'error', message: 'Could not fetch metadata' } };
+//         }
+//         const liveMetadata = await response.json();
+//         let nowPlaying = liveMetadata.data;
+
+//         // Check for a custom song cover override
+//         if (nowPlaying && nowPlaying.artist && nowPlaying.title) {
+//             const songKey = createSongKey(nowPlaying.artist, nowPlaying.title);
+//             const coverOverride = await SongCoverOverride.findOne({ songKey });
+//             if (coverOverride) {
+//                 nowPlaying.cover = coverOverride.customCoverUrl;
+//             }
+//         }
+        
+//         // Combine our DB data with the live data
+//         return {
+//           // Using .toObject() to get a plain JS object from the Mongoose document
+//           ...station.toObject(), 
+//           nowPlaying: nowPlaying,
+//         };
+
+//       } catch (fetchError) {
+//         console.error(`Error fetching for ${station.name}:`, fetchError);
+//         return { ...station.toObject(), nowPlaying: { status: 'error', message: 'Fetch failed' } };
+//       }
+//     });
+
+//     // 3. Wait for all the promises to resolve
+//     const fullStationData = await Promise.all(stationDataPromises);
+    
+//     // 4. Send the complete array
+//     res.json(fullStationData);
+
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+
 app.get('/api/station', async (req, res) => {
   try {
-    // 1. Get all stations from our database
-    const stationsFromDB = await Station.find();
+    // Only fetch visible stations
+    const stationsFromDB = await Station.find({ isVisible: true });
 
     if (!stationsFromDB || stationsFromDB.length === 0) {
       return res.json([]);
     }
 
-    // 2. Create an array of promises, one for each station's metadata fetch
     const stationDataPromises = stationsFromDB.map(async (station) => {
       try {
-        // Fetch live data for this specific station
         const response = await fetch(station.infomaniakUrl);
         if (!response.ok) {
-            // If one station fails, don't crash the whole API.
-            // Log the error and return a default "now playing" state.
-            console.error(`Failed to fetch metadata for ${station.name}: ${response.statusText}`);
-            return { ...station.toObject(), nowPlaying: { status: 'error', message: 'Could not fetch metadata' } };
+          console.error(`Failed to fetch metadata for ${station.name}: ${response.statusText}`);
+          return { ...station.toObject(), nowPlaying: { status: 'error', message: 'Could not fetch metadata' } };
         }
         const liveMetadata = await response.json();
         let nowPlaying = liveMetadata.data;
 
-        // Check for a custom song cover override
         if (nowPlaying && nowPlaying.artist && nowPlaying.title) {
-            const songKey = createSongKey(nowPlaying.artist, nowPlaying.title);
-            const coverOverride = await SongCoverOverride.findOne({ songKey });
-            if (coverOverride) {
-                nowPlaying.cover = coverOverride.customCoverUrl;
-            }
+          const songKey = createSongKey(nowPlaying.artist, nowPlaying.title);
+          const coverOverride = await SongCoverOverride.findOne({ songKey });
+          if (coverOverride) {
+            nowPlaying.cover = coverOverride.customCoverUrl;
+          }
         }
-        
-        // Combine our DB data with the live data
-        return {
-          // Using .toObject() to get a plain JS object from the Mongoose document
-          ...station.toObject(), 
-          nowPlaying: nowPlaying,
-        };
 
+        return {
+          ...station.toObject(),
+          nowPlaying,
+        };
       } catch (fetchError) {
         console.error(`Error fetching for ${station.name}:`, fetchError);
         return { ...station.toObject(), nowPlaying: { status: 'error', message: 'Fetch failed' } };
       }
     });
 
-    // 3. Wait for all the promises to resolve
     const fullStationData = await Promise.all(stationDataPromises);
-    
-    // 4. Send the complete array
     res.json(fullStationData);
 
   } catch (err) {
