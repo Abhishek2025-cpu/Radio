@@ -82,29 +82,24 @@ const importData = async () => {
     const insertedStations = await Station.insertMany(stations);
 
     // Fetch and inject nowPlaying data
-    for (const station of insertedStations) {
-      try {
-        const res = await axios.get(station.infomaniakUrl);
-        const metadata = res.data;
+ // Inside your importData script's for loop:
+for (const station of insertedStations) {
+  try {
+    const res = await axios.get(station.infomaniakUrl);
+    
+    // The data is inside the 'nowPlaying' property of the response
+    const nowPlayingData = res.data.nowPlaying || [];
 
-        const nowPlaying = [
-          {
-            title: metadata.title || 'Unknown Title',
-            artist: metadata.artist || 'Unknown Artist',
-            coverUrl: metadata.cover || '',
-            streamUrl: station.customStreamUrl, // important!
-            playedAt: new Date()
-          }
-        ];
-
-        await Station.updateOne(
-          { _id: station._id },
-          { $set: { nowPlaying } }
-        );
-      } catch (metaErr) {
-        console.warn(`Could not fetch metadata for ${station.name}: ${metaErr.message}`);
-      }
-    }
+    await Station.updateOne(
+      { _id: station._id },
+      { $set: { nowPlaying: nowPlayingData } } // Directly set the nowPlaying array
+    );
+  } catch (metaErr) {
+    console.warn(`Could not fetch metadata for ${station.name} during import: ${metaErr.message}`);
+    // Optional: set nowPlaying to empty array on failure during import
+    await Station.updateOne({ _id: station._id }, { $set: { nowPlaying: [] } });
+  }
+}
 
     await SongCoverOverride.insertMany(songOverrides);
     console.log('✅ Data fixed and re-imported successfully!');

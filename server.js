@@ -207,13 +207,49 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
 
 
 // --- READ all stations (for admin backoffice) ---
+
+
 app.get('/api/station/all', async (req, res) => {
     try {
-        // This route fetches ALL stations, including hidden ones
-        const allStations = await Station.find().sort({ createdAt: -1 });
-        res.json(allStations);
+        // 1. Fetch all station documents from your database
+        const stationsFromDB = await Station.find().sort({ createdAt: -1 });
+
+        // 2. Create an array of promises to fetch live metadata for each station in parallel
+        const updatePromises = stationsFromDB.map(async (station) => {
+            try {
+                // Make a live API call to the station's metadata URL
+                const metadataResponse = await axios.get(station.infomaniakUrl);
+
+                // Convert the Mongoose document to a plain JavaScript object to modify it
+                const stationObject = station.toObject();
+
+                // Inject the fresh 'nowPlaying' data from the API response
+                if (metadataResponse.data && metadataResponse.data.nowPlaying) {
+                    stationObject.nowPlaying = metadataResponse.data.nowPlaying;
+                } else {
+                    stationObject.nowPlaying = []; // Default to empty if data is missing
+                }
+                
+                return stationObject;
+
+            } catch (error) {
+                // IMPORTANT: If a single API call fails, don't crash the whole request.
+                // Instead, log the error and return the station with its stale data.
+                console.warn(`Could not fetch live metadata for ${station.name}: ${error.message}`);
+                const stationObject = station.toObject();
+                stationObject.nowPlaying = stationObject.nowPlaying || []; // Keep old data or default to empty
+                return stationObject;
+            }
+        });
+
+        // 3. Wait for all the parallel API calls to complete
+        const liveStations = await Promise.all(updatePromises);
+
+        // 4. Send the updated list of stations with live data to the client
+        res.json(liveStations);
+
     } catch (err) {
-        console.error(err.message);
+        console.error('Error in /api/station/all route:', err.message);
         res.status(500).send('Server Error');
     }
 });
