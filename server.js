@@ -11,7 +11,8 @@ const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 const { uploadToCloudinary } = require('./utils/cloudinary'); 
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = require('./middlewares/upload'); // import this
+
 
 
 

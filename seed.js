@@ -72,15 +72,41 @@ const songOverrides = [
     }
 ];
 
+const axios = require('axios');
+
 const importData = async () => {
   try {
-    // This will DELETE all existing (incorrect) stations and re-import the full, correct list
     await Station.deleteMany();
     await SongCoverOverride.deleteMany();
 
-    await Station.insertMany(stations);
-    await SongCoverOverride.insertMany(songOverrides);
+    const insertedStations = await Station.insertMany(stations);
 
+    // Fetch and inject nowPlaying data
+    for (const station of insertedStations) {
+      try {
+        const res = await axios.get(station.infomaniakUrl);
+        const metadata = res.data;
+
+        const nowPlaying = [
+          {
+            title: metadata.title || 'Unknown Title',
+            artist: metadata.artist || 'Unknown Artist',
+            coverUrl: metadata.cover || '',
+            streamUrl: station.customStreamUrl, // important!
+            playedAt: new Date()
+          }
+        ];
+
+        await Station.updateOne(
+          { _id: station._id },
+          { $set: { nowPlaying } }
+        );
+      } catch (metaErr) {
+        console.warn(`Could not fetch metadata for ${station.name}: ${metaErr.message}`);
+      }
+    }
+
+    await SongCoverOverride.insertMany(songOverrides);
     console.log('✅ Data fixed and re-imported successfully!');
     process.exit();
   } catch (error) {
@@ -88,6 +114,7 @@ const importData = async () => {
     process.exit(1);
   }
 };
+
 
 // Run the script
 importData();
