@@ -205,10 +205,10 @@ const fetch = require('node-fetch');
 const connectDB = require('./config/db.mongo');
 const Station = require('./models/mongo/Station');
 const SongCoverOverride = require('./models/mongo/SongCoverOverride');
-// const { uploadToCloudinary } = require('./utils/cloudinary'); 
+const { uploadToCloudinary } = require('./utils/cloudinary'); 
 
-// const storage = multer.memoryStorage();
-// const upload = multer({ storage: storage });
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 
 
@@ -351,53 +351,102 @@ app.get('/api/stations/:stationId', async (req, res) => {
 });
 
 
-// app.post('/api/add-station', upload.single('thumbnail'), async (req, res) => {
-//     try {
-//         // If a thumbnail file was uploaded, send it to Cloudinary
-//         if (req.file) {
-//             const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
-//             // Add the secure Cloudinary URL to the request body before saving
-//             req.body.thumbnailUrl = uploadResult.secure_url;
-//         }
 
-//         const newStation = await Station.create(req.body);
-//         res.status(201).json(newStation);
-//     } catch (err) {
-//         if (err.code === 11000) return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
-//         if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-//         console.error(err.message);
-//         res.status(500).send('Server Error');
-//     }
-// });
 
+// =================================================================
+// --- API ROUTES ---
+// =================================================================
+
+// --- CREATE a new station ---
+app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
+    try {
+        if (req.file) {
+            const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
+            req.body.thumbnailUrl = uploadResult.secure_url;
+        }
+        const newStation = await Station.create(req.body);
+        res.status(201).json(newStation);
+    } catch (err) {
+        if (err.code === 11000) return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
+        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
+// --- READ all stations (for admin backoffice) ---
+app.get('/api/station/all', async (req, res) => {
+    try {
+        // This route fetches ALL stations, including hidden ones
+        const allStations = await Station.find().sort({ createdAt: -1 });
+        res.json(allStations);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
 
 // // --- UPDATE an existing station ---
-// // PUT /api/stations/:stationId (Now handles file uploads)
-// app.put('/api/update-station/:stationId', upload.single('thumbnail'), async (req, res) => {
-//     try {
-//         const stationId = req.params.stationId.toUpperCase();
+app.put('/api/station/:stationId', upload.single('thumbnail'), async (req, res) => {
+    try {
+        const stationId = req.params.stationId.toUpperCase();
+        if (req.file) {
+            const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
+            req.body.thumbnailUrl = uploadResult.secure_url;
+        }
+        const updatedStation = await Station.findOneAndUpdate({ stationId }, req.body, { new: true, runValidators: true });
+        if (!updatedStation) return res.status(404).json({ message: 'Station not found' });
+        res.json(updatedStation);
+    } catch (err) {
+        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
+        res.status(500).send('Server Error');
+    }
+});
 
-//         // If a new thumbnail file was uploaded, send it to Cloudinary
-//         if (req.file) {
-//             const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
-//             // Add/overwrite the thumbnailUrl in the request body
-//             req.body.thumbnailUrl = uploadResult.secure_url;
-//         }
 
-//         const updatedStation = await Station.findOneAndUpdate(
-//             { stationId },
-//             req.body,
-//             { new: true, runValidators: true }
-//         );
-//         if (!updatedStation) return res.status(404).json({ message: 'Station not found' });
+
+
+
+
+// // --- PATCH to update visibility (show/hide) ---
+app.patch('/api/station/:stationId/visibility', async (req, res) => {
+    try {
+        const { isVisible } = req.body;
+        if (typeof isVisible !== 'boolean') {
+            return res.status(400).json({ message: 'isVisible must be a boolean (true or false).' });
+        }
         
-//         res.json(updatedStation);
-//     } catch (err) {
-//         if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-//         console.error(err.message);
-//         res.status(500).send('Server Error');
-//     }
-// });
+        const stationId = req.params.stationId.toUpperCase();
+        const station = await Station.findOneAndUpdate(
+            { stationId },
+            { isVisible },
+            { new: true }
+        );
+        if (!station) return res.status(404).json({ message: 'Station not found.' });
+
+        res.json({ message: `Station '${station.name}' visibility set to ${station.isVisible}.`, station });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+
+// // --- DELETE a station ---
+app.delete('/api/station/:stationId', async (req, res) => {
+    try {
+        const stationId = req.params.stationId.toUpperCase();
+        const deletedStation = await Station.findOneAndDelete({ stationId });
+        if (!deletedStation) return res.status(404).json({ message: 'Station not found.' });
+
+        // Future improvement: Delete the associated thumbnail from Cloudinary here.
+        
+        res.json({ message: `Station '${deletedStation.name}' was deleted successfully.` });
+    } catch (err) {
+        res.status(500).send('Server Error');
+    }
+});
+
+
 
 
 (async () => {
