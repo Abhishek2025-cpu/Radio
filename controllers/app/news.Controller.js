@@ -16,7 +16,7 @@ exports.createNews = async (req, res) => {
     const imageUrls = [];
     const audioUrls = [];
     const videoUrls = [];
-  const mediaFiles = req.files || [];
+ const mediaFiles = req.files || [];
 
 for (const file of mediaFiles) {
   try {
@@ -36,6 +36,7 @@ for (const file of mediaFiles) {
     console.error("❌ Cloudinary upload failed for one of the files:", uploadError);
   }
 }
+
 
 
     // --- THIS IS THE CORRECTED FILE HANDLING LOGIC ---
