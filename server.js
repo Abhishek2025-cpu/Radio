@@ -211,38 +211,39 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
 
 app.get('/api/station/all', async (req, res) => {
     try {
-        // 1. Fetch all station documents from your database
-        const stationsFromDB = await Station.find().sort({ createdAt: -1 });
+        const stationsFromDB = await Station.find({ isVisible: true }).sort({ name: 1 });
 
-        // 2. Create an array of promises to fetch live metadata for each station
         const updatePromises = stationsFromDB.map(async (station) => {
-            // Convert to a plain object to avoid Mongoose issues when modifying
             const stationObject = station.toObject();
 
             try {
-                // Make a live API call to the station's metadata URL
-                const metadataResponse = await axios.get(station.infomaniakUrl, { timeout: 5000 }); // Added a 5-second timeout
+                const metadataResponse = await axios.get(station.infomaniakUrl, { timeout: 5000 });
 
-                // Inject the fresh 'nowPlaying' data. Wrap it in an array.
-                const nowPlayingData = metadataResponse.data?.nowPlaying;
-                stationObject.nowPlaying = nowPlayingData ? [nowPlayingData] : [];
+                // --- START OF THE FIX ---
+
+                // 1. Get the song history array from the `data` key.
+                const songHistory = metadataResponse.data?.data;
+
+                // 2. Find the first *valid* song in the history (not a jingle or empty title).
+                const currentSong = songHistory?.find(song => 
+                    song.title && song.title.trim().length > 1 && song.title.trim() !== '-'
+                );
+
+                // 3. If a valid song is found, put it in the nowPlaying array. Otherwise, it's an empty array.
+                stationObject.nowPlaying = currentSong ? [currentSong] : [];
+
+                // --- END OF THE FIX ---
                 
                 return stationObject;
 
             } catch (error) {
-                // THIS IS THE MOST IMPORTANT PART FOR DEBUGGING
-                console.warn(`[API FALLBACK] Could not fetch live metadata for ${station.name}. Reason: ${error.message}. Returning stale data from DB.`);
-                
-                // On failure, return the station with its existing (stale) data.
-                // The 'nowPlaying' field is already on stationObject from the DB.
-                return stationObject;
+                // This part is still important for handling network errors.
+                console.warn(`[API FALLBACK] Could not fetch live metadata for ${station.name}. Reason: ${error.message}.`);
+                return stationObject; // Return stale data from DB on failure.
             }
         });
 
-        // 3. Wait for all the parallel API calls to complete (or fail gracefully)
         const liveStations = await Promise.all(updatePromises);
-
-        // 4. Send the updated list of stations
         res.json(liveStations);
 
     } catch (err) {

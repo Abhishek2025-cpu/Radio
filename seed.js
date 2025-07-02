@@ -2,9 +2,9 @@
 
 require('dotenv').config();
 const axios = require('axios');
-const connectDB = require('../config/db.mongo'); // Adjust path if needed
-const Station = require('../models/mongo/Station'); // Adjust path if needed
-const SongCoverOverride = require('../models/mongo/SongCoverOverride'); // Adjust path if needed
+const connectDB = require('./config/db.mongo');// Adjust path if needed
+const Station = require('./models/mongo/Station'); // Adjust path if needed
+const SongCoverOverride = require('./models/mongo/SongCoverOverride'); // Adjust path if needed
 
 // Connect to DB
 connectDB();
@@ -71,51 +71,61 @@ const songOverrides = [
 
 const importData = async () => {
   try {
-    console.log('Clearing existing data...');
+    console.log('--- Data Import Started ---');
+    console.log('1. Clearing existing data...');
     await Station.deleteMany();
     await SongCoverOverride.deleteMany();
-    console.log('Data cleared.');
+    console.log('✅ Data cleared.');
 
-    console.log('Inserting base station data...');
-    const stationDocs = stations.map(s => ({ ...s, nowPlaying: [] })); // Start with empty nowPlaying
+    console.log('2. Inserting base station and override data...');
+    const stationDocs = stations.map(s => ({ ...s, nowPlaying: [] }));
     await Station.insertMany(stationDocs);
     await SongCoverOverride.insertMany(songOverrides);
-    console.log('Base data inserted successfully.');
+    console.log('✅ Base data inserted successfully.');
 
-    // Fetch and inject nowPlaying data
-    console.log('Fetching live metadata for each station...');
-    const allStations = await Station.find(); // Get all stations we just inserted
+    console.log('3. Fetching initial live metadata for each station...');
+    const allStations = await Station.find();
 
     for (const station of allStations) {
       try {
-        const res = await axios.get(station.infomaniakUrl);
+        // Fetch data with a timeout to prevent hanging
+        const res = await axios.get(station.infomaniakUrl, { timeout: 5000 });
         
-        // The API returns a 'nowPlaying' object. We'll put it in an array.
-        const nowPlayingObject = res.data?.nowPlaying;
+        // --- START: CORRECTED LOGIC ---
 
-        if (nowPlayingObject && nowPlayingObject.id) {
-          // If we got valid data, update the station
+        // 1. Get the song history array from the `data` key in the response.
+        const songHistory = res.data?.data;
+
+        // 2. Find the first *valid* song. This filters out jingles or ads
+        //    that have empty or placeholder titles.
+        const currentSong = songHistory?.find(song => 
+            song.title && song.title.trim().length > 1 && song.title.trim() !== '-'
+        );
+
+        // 3. If a valid current song was found, update the database.
+        if (currentSong) {
           await Station.updateOne(
             { _id: station._id },
-            // Wrap the object in an array to match the schema
-            { $set: { nowPlaying: [nowPlayingObject] } } 
+            // Store the single song object in an array to match schema
+            { $set: { nowPlaying: [currentSong] } } 
           );
-          console.log(`✅ Metadata updated for ${station.name}`);
+          console.log(`  -> Fetched metadata for ${station.name}`);
         } else {
-          // If API returns no song, ensure it's an empty array
-          await Station.updateOne({ _id: station._id }, { $set: { nowPlaying: [] } });
-          console.warn(`⚠️ No "nowPlaying" data found for ${station.name}, setting to empty array.`);
+          // If no valid song is found in the history, log it. The DB entry will remain empty.
+          console.warn(`  -> ⚠️ No valid song found in history for ${station.name}.`);
         }
+        // --- END: CORRECTED LOGIC ---
+
       } catch (metaErr) {
-        console.error(`❌ Could not fetch metadata for ${station.name}: ${metaErr.message}`);
-        // Leave nowPlaying as the default empty array on failure
+        // This catches network errors (timeout, no connection, etc.)
+        console.error(`  -> ❌ ERROR fetching for ${station.name}: ${metaErr.message}`);
       }
     }
 
-    console.log('\nData import process finished!');
+    console.log('\n--- ✅ Data Import Process Finished! ---');
     process.exit();
   } catch (error) {
-    console.error(`❌ Fatal error during data import: ${error}`);
+    console.error(`\n--- ❌ FATAL ERROR during import: ${error.message} ---`);
     process.exit(1);
   }
 };
