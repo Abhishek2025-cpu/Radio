@@ -1,6 +1,6 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
-
+ const { uploadToCloudinary } = require('../../utils/cloudinary');
 
 
 
