@@ -152,57 +152,117 @@ app.get('/api/stations/:stationId', async (req, res) => {
 // =================================================================
 
 // --- CREATE a new station ---
-
-
 app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
     try {
-        // Create a mutable copy of the body to add/modify properties
         const stationData = { ...req.body };
 
-        // 1. Handle Thumbnail Upload: Multer-Cloudinary automatically provides the URL
         if (req.file) {
-            // The `path` from multer-storage-cloudinary is the secure URL
             stationData.thumbnailUrl = req.file.path;
         }
 
-        // 2. Fetch Live Metadata from Infomaniak URL
+        // 2. Fetch and PARSE Live Metadata from Infomaniak URL
         if (stationData.infomaniakUrl) {
             try {
                 const metadataResponse = await axios.get(stationData.infomaniakUrl);
-                if (metadataResponse.data && metadataResponse.data.nowPlaying) {
-                    stationData.nowPlaying = metadataResponse.data.nowPlaying;
-                    console.log(`Successfully fetched metadata for ${stationData.name || stationData.stationId}`);
+
+                // CORRECTED LOGIC: Check for `data.data` which is an array
+                if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
+                    
+                    // Parse the raw data into a clean `nowPlaying` array
+                    stationData.nowPlaying = metadataResponse.data.data
+                        // 1. Filter out placeholder entries (like title " - ") and items without a cover
+                        .filter(item => item.title && item.title.trim() !== '-' && item.cover)
+                        // 2. Map the remaining items to a clean object structure
+                        .map(item => {
+                            const parts = item.title.split(' - ');
+                            const title = parts[0] ? parts[0].trim() : 'Unknown Title';
+                            const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
+
+                            return {
+                                title: title,
+                                artist: artist,
+                                coverUrl: item.cover,
+                                playedAt: item.date, // The unix timestamp
+                                duration: item.duration
+                            };
+                        });
+                    
+                    console.log(`Successfully fetched and parsed metadata for ${stationData.name || stationData.stationId}`);
+
                 } else {
-                    console.warn(`Metadata from ${stationData.infomaniakUrl} was fetched but did not contain a 'nowPlaying' field.`);
+                    console.warn(`Metadata from ${stationData.infomaniakUrl} did not contain a 'data' array.`);
                     stationData.nowPlaying = []; // Default to empty array
                 }
             } catch (fetchError) {
-                // Log the error but allow station creation to proceed
                 console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
                 stationData.nowPlaying = []; // Default to empty array on failure
             }
         }
 
-        // 3. Create the Station in the Database
         const newStation = await Station.create(stationData);
-
-        // 4. Send Success Response
         res.status(201).json(newStation);
 
     } catch (err) {
-        // Handle Database and Validation Errors
         if (err.code === 11000) {
             return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
         }
         if (err.name === 'ValidationError') {
             return res.status(400).json({ message: err.message });
         }
-
-        // Handle Generic Server Errors
         console.error('An unexpected error occurred:', err);
         res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
+
+// app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
+//     try {
+//         // Create a mutable copy of the body to add/modify properties
+//         const stationData = { ...req.body };
+
+//         // 1. Handle Thumbnail Upload: Multer-Cloudinary automatically provides the URL
+//         if (req.file) {
+//             // The `path` from multer-storage-cloudinary is the secure URL
+//             stationData.thumbnailUrl = req.file.path;
+//         }
+
+//         // 2. Fetch Live Metadata from Infomaniak URL
+//         if (stationData.infomaniakUrl) {
+//             try {
+//                 const metadataResponse = await axios.get(stationData.infomaniakUrl);
+//                 if (metadataResponse.data && metadataResponse.data.nowPlaying) {
+//                     stationData.nowPlaying = metadataResponse.data.nowPlaying;
+//                     console.log(`Successfully fetched metadata for ${stationData.name || stationData.stationId}`);
+//                 } else {
+//                     console.warn(`Metadata from ${stationData.infomaniakUrl} was fetched but did not contain a 'nowPlaying' field.`);
+//                     stationData.nowPlaying = []; // Default to empty array
+//                 }
+//             } catch (fetchError) {
+//                 // Log the error but allow station creation to proceed
+//                 console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
+//                 stationData.nowPlaying = []; // Default to empty array on failure
+//             }
+//         }
+
+//         // 3. Create the Station in the Database
+//         const newStation = await Station.create(stationData);
+
+//         // 4. Send Success Response
+//         res.status(201).json(newStation);
+
+//     } catch (err) {
+//         // Handle Database and Validation Errors
+//         if (err.code === 11000) {
+//             return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
+//         }
+//         if (err.name === 'ValidationError') {
+//             return res.status(400).json({ message: err.message });
+//         }
+
+//         // Handle Generic Server Errors
+//         console.error('An unexpected error occurred:', err);
+//         res.status(500).json({ message: 'An unexpected server error occurred.' });
+//     }
+// });
 
 
 
