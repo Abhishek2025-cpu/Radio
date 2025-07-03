@@ -362,7 +362,7 @@ const updateFields = [
 ];
 
 
-app.put('/api/station/:stationId', stationUploader.fields(updateFields), async (req, res) => {
+app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields), async (req, res) => {
     try {
         const { stationId } = req.params;
 
