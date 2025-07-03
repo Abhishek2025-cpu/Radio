@@ -9,7 +9,7 @@ const connectDB = require('./config/db.mongo');
 const Station = require('./models/mongo/Station');
 const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 const { uploadToCloudinary } = require('./utils/cloudinary'); 
-const stationThumbnailUploader = require('./middlewares/stationUpload');
+const uploader = require('../middleware/stationUpload');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -355,79 +355,84 @@ app.get('/api/station/all', async (req, res) => {
     }
 });
 
+
+
 // // --- UPDATE an existing station ---
 const updateStationFields = [
     { name: 'thumbnail', maxCount: 1 },
     { name: 'coverOverrideImage', maxCount: 1 }
 ];
 
-app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateStationFields), async (req, res) => {
+app.put('/api/station/:stationId', uploader.fields(updateStationFields), async (req, res) => {
     try {
         const { stationId } = req.params;
-s
-        // 1. Find the existing station
+        
+        // --- LOGGING: See what data we received ---
+        console.log('--- UPDATE REQUEST RECEIVED ---');
+        console.log('Request Body:', req.body);
+        console.log('Request Files:', req.files);
+        // ------------------------------------------
+
         const station = await Station.findOne({ stationId: stationId.toUpperCase() });
         if (!station) {
             return res.status(404).json({ message: 'Station not found' });
         }
+        
+        console.log(`Found station with ID: ${station._id}`);
 
-        // 2. Handle simple text field updates (name, color, etc.)
         const updatableFields = ['name', 'color', 'isVisible', 'customStreamUrl', 'infomaniakUrl'];
         updatableFields.forEach(field => {
             if (req.body[field] !== undefined) {
                 station[field] = req.body[field];
             }
         });
-        
-        // `req.files` (plural) is now an object containing the uploaded files, e.g.,
-        // { thumbnail: [fileObject], coverOverrideImage: [fileObject] }
 
-        // 3. Handle NEW station thumbnail upload
-        if (req.files && req.files.thumbnail) {
-            const newThumbnailUrl = req.files.thumbnail[0].path;
-            console.log(`New station thumbnail uploaded: ${newThumbnailUrl}`);
-            station.thumbnailUrl = newThumbnailUrl;
+        // DEFENSIVE CHECK for req.files
+        if (req.files && req.files.thumbnail && req.files.thumbnail.length > 0) {
+            station.thumbnailUrl = req.files.thumbnail[0].path;
+            console.log(`Updated thumbnail URL to: ${station.thumbnailUrl}`);
         }
 
-        // 4. Handle a specific metadata cover image override (with separate fields)
         const { coverOverrideTitle, coverOverrideArtist } = req.body;
-        const coverOverrideImageFile = req.files && req.files.coverOverrideImage 
+        // DEFENSIVE CHECK for req.files and the specific field
+        const coverOverrideImageFile = (req.files && req.files.coverOverrideImage && req.files.coverOverrideImage.length > 0)
             ? req.files.coverOverrideImage[0] 
             : null;
 
-        // We only proceed if we have all three parts: title, artist, AND a new image file.
         if (coverOverrideTitle && coverOverrideArtist && coverOverrideImageFile) {
-            const newCoverUrl = coverOverrideImageFile.path;
-            console.log(`Attempting to update cover for '${coverOverrideTitle}' with new image: ${newCoverUrl}`);
+            // DEFENSIVE CHECK: Ensure nowPlaying is an array before we try to use .findIndex
+            if (Array.isArray(station.nowPlaying)) {
+                const songIndex = station.nowPlaying.findIndex(song => 
+                    song.title === coverOverrideTitle && song.artist === coverOverrideArtist
+                );
 
-            // Find the index of the song to update in the nowPlaying array
-            const songIndex = station.nowPlaying.findIndex(song => 
-                song.title === coverOverrideTitle && song.artist === coverOverrideArtist
-            );
-
-            if (songIndex > -1) {
-                // Update the coverUrl for that specific song
-                station.nowPlaying[songIndex].coverUrl = newCoverUrl;
-                console.log(`Cover for '${coverOverrideTitle}' was updated successfully.`);
+                if (songIndex > -1) {
+                    station.nowPlaying[songIndex].coverUrl = coverOverrideImageFile.path;
+                    console.log(`Successfully updated cover for '${coverOverrideTitle}'.`);
+                } else {
+                    console.warn(`Song '${coverOverrideTitle}' not found in nowPlaying array.`);
+                }
             } else {
-                console.warn(`Could not find song '${coverOverrideTitle} - ${coverOverrideArtist}' to override cover.`);
+                console.warn('Station document is missing a valid nowPlaying array. Cannot update cover.');
             }
         }
-
-        // 5. Save all the accumulated changes to the database
+        
+        console.log('Attempting to save station...');
         const updatedStation = await station.save();
+        console.log('Station saved successfully.');
 
         res.status(200).json(updatedStation);
 
     } catch (err) {
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: err.message });
-        }
-        console.error('Update Station Error:', err);
+        // --- THIS IS THE MOST IMPORTANT PART ---
+        // Log the ACTUAL error to the console so we can see it.
+        console.error('--- AN ERROR OCCURRED IN THE UPDATE ROUTE ---', err);
+        // ------------------------------------------
+        
+        // We still send a generic message to the client for security.
         res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
-
 
 
 
