@@ -356,19 +356,76 @@ app.get('/api/station/all', async (req, res) => {
 });
 
 // // --- UPDATE an existing station ---
-app.put('/api/station/:stationId', upload.single('thumbnail'), async (req, res) => {
+const updateFields = [
+    { name: 'thumbnail', maxCount: 1 },          // For the main station image
+    { name: 'coverOverrideImage', maxCount: 1 }  // For a specific song's cover
+];
+
+
+app.put('/api/station/:stationId', stationUploader.fields(updateFields), async (req, res) => {
     try {
-        const stationId = req.params.stationId.toUpperCase();
-        if (req.file) {
-            const uploadResult = await uploadToCloudinary(req.file.buffer, req.file.mimetype);
-            req.body.thumbnailUrl = uploadResult.secure_url;
+        const { stationId } = req.params;
+
+        // 1. FETCH the station from the database first
+        const station = await Station.findOne({ stationId: stationId.toUpperCase() });
+
+        if (!station) {
+            return res.status(404).json({ message: 'Station not found' });
         }
-        const updatedStation = await Station.findOneAndUpdate({ stationId }, req.body, { new: true, runValidators: true });
-        if (!updatedStation) return res.status(404).json({ message: 'Station not found' });
-        res.json(updatedStation);
+
+        // 2. UPDATE the simple text fields if they were provided
+        const updatableFields = ['name', 'color', 'isVisible', 'customStreamUrl', 'infomaniakUrl'];
+        updatableFields.forEach(field => {
+            if (req.body[field] !== undefined) {
+                station[field] = req.body[field];
+            }
+        });
+
+        // The uploader puts all uploaded files into `req.files` (plural)
+        // It will be an object like: { thumbnail: [file], coverOverrideImage: [file] }
+
+        // 3. UPDATE the station thumbnail if a new one was uploaded
+        if (req.files && req.files.thumbnail) {
+            station.thumbnailUrl = req.files.thumbnail[0].path; // Get the URL from Cloudinary
+        }
+
+        // 4. UPDATE a specific song's cover in the nowPlaying array
+        const { coverOverrideTitle, coverOverrideArtist } = req.body;
+        const coverOverrideImageFile = req.files && req.files.coverOverrideImage 
+            ? req.files.coverOverrideImage[0] 
+            : null;
+
+        // We only perform the update if we have the title, artist, AND a new image file
+        if (coverOverrideTitle && coverOverrideArtist && coverOverrideImageFile) {
+            
+            // Find the specific song in the array
+            const songIndex = station.nowPlaying.findIndex(song => 
+                song.title === coverOverrideTitle && song.artist === coverOverrideArtist
+            );
+
+            if (songIndex > -1) {
+                // If found, update its coverUrl with the new Cloudinary URL
+                station.nowPlaying[songIndex].coverUrl = coverOverrideImageFile.path;
+                console.log(`Successfully updated cover for '${coverOverrideTitle}'`);
+            } else {
+                console.warn(`Could not find song '${coverOverrideTitle}' to update its cover.`);
+            }
+        }
+        
+        // 5. SAVE all the changes back to the database
+        const updatedStation = await station.save();
+
+        res.status(200).json(updatedStation);
+
     } catch (err) {
-        if (err.name === 'ValidationError') return res.status(400).json({ message: err.message });
-        res.status(500).send('Server Error');
+        // Log the detailed error on the server for debugging
+        console.error('Update Station Error:', err);
+        
+        if (err.name === 'ValidationError') {
+            return res.status(400).json({ message: err.message });
+        }
+        // Send a generic error to the client
+        res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
 
