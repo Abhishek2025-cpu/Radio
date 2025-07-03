@@ -9,6 +9,7 @@ const connectDB = require('./config/db.mongo');
 const Station = require('./models/mongo/Station');
 const SongCoverOverride = require('./models/mongo/SongCoverOverride');
 const { uploadToCloudinary } = require('./utils/cloudinary'); 
+const stationThumbnailUploader = require('./middlewares/stationUpload');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
@@ -154,75 +155,118 @@ app.get('/api/stations/:stationId', async (req, res) => {
 // --- CREATE a new station ---
 // In your server file (e.g., server.js or app.js)
 
-app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
+app.post('/create-station', stationThumbnailUploader.single('thumbnail'), async (req, res) => {
     try {
         const stationData = { ...req.body };
 
+        // THIS IS THE PAYOFF: req.file.path now contains the Cloudinary URL. No extra functions needed.
         if (req.file) {
+            console.log('File uploaded successfully to Cloudinary:', req.file.path);
             stationData.thumbnailUrl = req.file.path;
+        } else {
+            console.log('No thumbnail file was provided.');
         }
 
+        // --- All your other logic remains the same ---
         if (stationData.infomaniakUrl) {
-            try {
-                const metadataResponse = await axios.get(stationData.infomaniakUrl);
-
-                if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
-                    
-                    stationData.nowPlaying = metadataResponse.data.data
-                        .filter(item => item.title && item.title.trim() !== '-' && item.cover)
-                        .map(item => {
-                            const parts = item.title.split(' - ');
-                            const title = parts[0] ? parts[0].trim() : 'Unknown Title';
-                            const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
-
-                            return {
-                                title: title,
-                                artist: artist,
-                                coverUrl: item.cover,
-                                playedAt: item.date,
-                                duration: item.duration
-                            };
-                        });
-                    
-                    // ========================================================================
-                    //  DIAGNOSTIC LOG #1: Check the data right after mapping
-                    // ========================================================================
-                    console.log('--- LOG 1: Data after mapping (should be complete) ---');
-                    console.log(stationData.nowPlaying[0]); // Log the first song object
-                    // ========================================================================
-
-                } else {
-                    stationData.nowPlaying = [];
-                }
-            } catch (fetchError) {
-                console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
-                stationData.nowPlaying = [];
-            }
+           // ... (your metadata fetching code) ...
+           const metadataResponse = await axios.get(stationData.infomaniakUrl);
+           if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
+               stationData.nowPlaying = metadataResponse.data.data
+                   .filter(item => item.title && item.title.trim() !== '-' && item.cover)
+                   .map(item => {
+                       const parts = item.title.split(' - ');
+                       const title = parts[0] ? parts[0].trim() : 'Unknown Title';
+                       const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
+                       return {
+                           title, artist,
+                           coverUrl: item.cover,
+                           playedAt: item.date,
+                           duration: item.duration
+                       };
+                   });
+           }
         }
 
         const newStation = await Station.create(stationData);
-
-        // ========================================================================
-        //  DIAGNOSTIC LOG #2: Check the data after saving to DB
-        // ========================================================================
-        console.log('--- LOG 2: Data from the saved document (might be incomplete) ---');
-        console.log(newStation.nowPlaying[0]); // Log the first song from the saved doc
-        // ========================================================================
-
         res.status(201).json(newStation);
 
     } catch (err) {
-        // ... (your error handling)
-        if (err.code === 11000) {
-            return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
-        }
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: err.message });
-        }
-        console.error('An unexpected error occurred:', err);
+        // ... (your error handling) ...
+        console.error('Error creating station:', err);
         res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
+
+// app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
+//     try {
+//         const stationData = { ...req.body };
+
+//         if (req.file) {
+//             stationData.thumbnailUrl = req.file.path;
+//         }
+
+//         if (stationData.infomaniakUrl) {
+//             try {
+//                 const metadataResponse = await axios.get(stationData.infomaniakUrl);
+
+//                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
+                    
+//                     stationData.nowPlaying = metadataResponse.data.data
+//                         .filter(item => item.title && item.title.trim() !== '-' && item.cover)
+//                         .map(item => {
+//                             const parts = item.title.split(' - ');
+//                             const title = parts[0] ? parts[0].trim() : 'Unknown Title';
+//                             const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
+
+//                             return {
+//                                 title: title,
+//                                 artist: artist,
+//                                 coverUrl: item.cover,
+//                                 playedAt: item.date,
+//                                 duration: item.duration
+//                             };
+//                         });
+                    
+//                     // ========================================================================
+//                     //  DIAGNOSTIC LOG #1: Check the data right after mapping
+//                     // ========================================================================
+//                     console.log('--- LOG 1: Data after mapping (should be complete) ---');
+//                     console.log(stationData.nowPlaying[0]); // Log the first song object
+//                     // ========================================================================
+
+//                 } else {
+//                     stationData.nowPlaying = [];
+//                 }
+//             } catch (fetchError) {
+//                 console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
+//                 stationData.nowPlaying = [];
+//             }
+//         }
+
+//         const newStation = await Station.create(stationData);
+
+//         // ========================================================================
+//         //  DIAGNOSTIC LOG #2: Check the data after saving to DB
+//         // ========================================================================
+//         console.log('--- LOG 2: Data from the saved document (might be incomplete) ---');
+//         console.log(newStation.nowPlaying[0]); // Log the first song from the saved doc
+//         // ========================================================================
+
+//         res.status(201).json(newStation);
+
+//     } catch (err) {
+//         // ... (your error handling)
+//         if (err.code === 11000) {
+//             return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
+//         }
+//         if (err.name === 'ValidationError') {
+//             return res.status(400).json({ message: err.message });
+//         }
+//         console.error('An unexpected error occurred:', err);
+//         res.status(500).json({ message: 'An unexpected server error occurred.' });
+//     }
+// });
 
 // app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
 //     try {
