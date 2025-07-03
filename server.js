@@ -152,6 +152,8 @@ app.get('/api/stations/:stationId', async (req, res) => {
 // =================================================================
 
 // --- CREATE a new station ---
+// In your server file (e.g., server.js or app.js)
+
 app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => {
     try {
         const stationData = { ...req.body };
@@ -160,29 +162,27 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
             stationData.thumbnailUrl = req.file.path;
         }
 
-        // 2. Fetch and PARSE Live Metadata from Infomaniak URL
         if (stationData.infomaniakUrl) {
             try {
                 const metadataResponse = await axios.get(stationData.infomaniakUrl);
 
-                // CORRECTED LOGIC: Check for `data.data` which is an array
                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
                     
-                    // Parse the raw data into a clean `nowPlaying` array
+                    // THIS IS THE CORRECTED MAPPING LOGIC
                     stationData.nowPlaying = metadataResponse.data.data
-                        // 1. Filter out placeholder entries (like title " - ") and items without a cover
                         .filter(item => item.title && item.title.trim() !== '-' && item.cover)
-                        // 2. Map the remaining items to a clean object structure
                         .map(item => {
+                            // 1. Split "Title - Artist" string into two parts
                             const parts = item.title.split(' - ');
                             const title = parts[0] ? parts[0].trim() : 'Unknown Title';
                             const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
 
+                            // 2. Return a NEW object with ALL the fields you need
                             return {
                                 title: title,
                                 artist: artist,
-                                coverUrl: item.cover,
-                                playedAt: item.date, // The unix timestamp
+                                coverUrl: item.cover, // <-- THE IMPORTANT PART
+                                playedAt: item.date,
                                 duration: item.duration
                             };
                         });
@@ -191,11 +191,11 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
 
                 } else {
                     console.warn(`Metadata from ${stationData.infomaniakUrl} did not contain a 'data' array.`);
-                    stationData.nowPlaying = []; // Default to empty array
+                    stationData.nowPlaying = [];
                 }
             } catch (fetchError) {
                 console.error(`Failed to fetch metadata from ${stationData.infomaniakUrl}:`, fetchError.message);
-                stationData.nowPlaying = []; // Default to empty array on failure
+                stationData.nowPlaying = [];
             }
         }
 
