@@ -5,12 +5,12 @@ const mongoose = require('mongoose');
 // Define a schema for the "now playing" sub-document
 // This ensures data consistency for the items in the 'nowPlaying' array
 const NowPlayingSchema = new mongoose.Schema({
-    date: Number,
-    title: String,
-    microtime: Number,
-    cover: String,
-    duration: Number
-}, { _id: false }); // Using _id: false prevents Mongoose from creating redundant IDs for these sub-documents
+    title: { type: String, required: true },
+    artist: { type: String },
+    coverUrl: { type: String }, // <-- THIS IS ESSENTIAL
+    playedAt: { type: Number }, // <-- THIS IS ESSENTIAL
+    duration: { type: Number }
+}, { _id: false });// Using _id: false prevents Mongoose from creating redundant IDs for these sub-documents
 
 const stationSchema = new mongoose.Schema({
     // e.g., "U80", "U90". We use this for easy lookups.

@@ -168,29 +168,30 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
 
                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
                     
-                    // THIS IS THE CORRECTED MAPPING LOGIC
                     stationData.nowPlaying = metadataResponse.data.data
                         .filter(item => item.title && item.title.trim() !== '-' && item.cover)
                         .map(item => {
-                            // 1. Split "Title - Artist" string into two parts
                             const parts = item.title.split(' - ');
                             const title = parts[0] ? parts[0].trim() : 'Unknown Title';
                             const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
 
-                            // 2. Return a NEW object with ALL the fields you need
                             return {
                                 title: title,
                                 artist: artist,
-                                coverUrl: item.cover, // <-- THE IMPORTANT PART
+                                coverUrl: item.cover,
                                 playedAt: item.date,
                                 duration: item.duration
                             };
                         });
                     
-                    console.log(`Successfully fetched and parsed metadata for ${stationData.name || stationData.stationId}`);
+                    // ========================================================================
+                    //  DIAGNOSTIC LOG #1: Check the data right after mapping
+                    // ========================================================================
+                    console.log('--- LOG 1: Data after mapping (should be complete) ---');
+                    console.log(stationData.nowPlaying[0]); // Log the first song object
+                    // ========================================================================
 
                 } else {
-                    console.warn(`Metadata from ${stationData.infomaniakUrl} did not contain a 'data' array.`);
                     stationData.nowPlaying = [];
                 }
             } catch (fetchError) {
@@ -200,9 +201,18 @@ app.post('/api/create-station', upload.single('thumbnail'), async (req, res) => 
         }
 
         const newStation = await Station.create(stationData);
+
+        // ========================================================================
+        //  DIAGNOSTIC LOG #2: Check the data after saving to DB
+        // ========================================================================
+        console.log('--- LOG 2: Data from the saved document (might be incomplete) ---');
+        console.log(newStation.nowPlaying[0]); // Log the first song from the saved doc
+        // ========================================================================
+
         res.status(201).json(newStation);
 
     } catch (err) {
+        // ... (your error handling)
         if (err.code === 11000) {
             return res.status(409).json({ message: `Station with stationId '${req.body.stationId}' already exists.` });
         }
