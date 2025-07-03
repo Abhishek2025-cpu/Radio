@@ -1,19 +1,22 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../utils/cloudinary'); // Import your configured Cloudinary
+
+// 1. We import the entire object you exported { cloudinary, uploadToCloudinary }
+//    Let's rename it to be clear about what it is.
+const cloudinaryConfig = require('../utils/cloudinary'); 
 
 // Configure Multer to use Cloudinary for storage
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  // 2. THE FIX: Instead of passing the whole object, we pass the 'cloudinary' property from it.
+  cloudinary: cloudinaryConfig.cloudinary, 
+  
   params: {
-    folder: 'station-thumbnails', // A specific folder for these images
+    folder: 'station-thumbnails',
     allowed_formats: ['jpeg', 'jpg', 'png'],
-    // You can add transformations here if you want to resize images on upload
-    // transformation: [{ width: 300, height: 300, crop: 'limit' }]
   }
 });
 
-// Create and export the Multer instance configured for thumbnails
+// Create and export the Multer instance. This part doesn't change.
 const stationThumbnailUploader = multer({ storage: storage });
 
 module.exports = stationThumbnailUploader;

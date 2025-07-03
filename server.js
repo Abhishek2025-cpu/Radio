@@ -155,7 +155,7 @@ app.get('/api/stations/:stationId', async (req, res) => {
 // --- CREATE a new station ---
 // In your server file (e.g., server.js or app.js)
 
-app.post('/create-station', stationThumbnailUploader.single('thumbnail'), async (req, res) => {
+app.post('/api/create-station', stationThumbnailUploader.single('thumbnail'), async (req, res) => {
     try {
         const stationData = { ...req.body };
 
