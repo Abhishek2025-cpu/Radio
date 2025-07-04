@@ -367,23 +367,25 @@ const updateFields = [
 
 // In your main server file (e.g., app.js)
 
+// In your main server file (e.g., app.js)
+
 app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields), async (req, res) => {
-    // <<-- WRAP THE ENTIRE LOGIC IN A RETRY LOOP -->>
+    // <<--- THE ULTIMATE DIAGNOSTIC LOG --- >>
+    console.log('API V6 (RETRY LOGIC) IS RUNNING FOR THIS REQUEST.'); 
+
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
         try {
             const { stationId } = req.params;
-            // Fetch the station inside the loop to get the latest version on retries
             const station = await Station.findOne({ stationId: stationId.toUpperCase() });
 
             if (!station) {
-                // No need to retry if the station doesn't exist at all
                 return res.status(404).json({ message: 'Station not found' });
             }
 
-            // 1. Update simple text fields
+            // Update simple text fields
             const updatableFields = ['name', 'color', 'isVisible'];
             updatableFields.forEach(field => {
                 if (req.body[field] !== undefined) {
@@ -391,12 +393,12 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
                 }
             });
 
-            // 2. Update station thumbnail
+            // Update station thumbnail
             if (req.files && req.files.thumbnail) {
                 station.thumbnailUrl = req.files.thumbnail[0].path;
             }
 
-            // 3. Update song cover override
+            // Update song cover override
             const { songTitle, songArtist, removeCoverOverride } = req.body;
             const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
 
@@ -406,6 +408,7 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
                 );
 
                 if (!songToUpdate) {
+                    // This is a "clean" exit, not an error.
                     return res.status(404).json({ message: `Song "${songTitle}" by "${songArtist}" not found in this station's playlist.` });
                 }
 
@@ -416,32 +419,25 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
                 }
             }
             
-            // 4. Save all changes
             const updatedStation = await station.save();
-            
-            // If save is successful, send response and exit the loop
             return res.status(200).json(updatedStation); 
 
         } catch (err) {
-            // 5. Check if it's the specific versioning error
             if (err.name === 'VersionError') {
                 attempts++;
                 console.warn(`API UPDATE CONFLICT: Version conflict for ${req.params.stationId}. Retrying... (Attempt ${attempts}/${maxAttempts})`);
                 if (attempts >= maxAttempts) {
-                    // If we failed after all retries, send a specific error
                     return res.status(409).json({ message: 'Conflict: The station was updated by another process. Please try again.' });
                 }
-                // Wait a moment before retrying
                 await new Promise(resolve => setTimeout(resolve, 75));
-            } else {
-                // It's a different, unexpected error. Log it and send 500.
-                console.error('Update Station Error:', err);
-                return res.status(500).json({ message: 'An unexpected server error occurred.' });
-            }
+           } else {
+    // This is where the error is likely coming from.
+    console.error('CRITICAL API ERROR:', err); // <--- THIS LINE IS EXECUTING
+    return res.status(500).json({ message: 'An unexpected server error occurred.' });
+}
         }
     }
 });
-
 
 // This task will run every 2 minutes. You can change the schedule.
 //  cron job file
