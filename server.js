@@ -553,6 +553,56 @@ app.delete('/api/station/:stationId', async (req, res) => {
     }
 });
 
+app.get('/api/metadata-check', async (req, res) => {
+    const { channelId } = req.query;
+
+    if (!channelId) {
+        return res.status(400).json({ error: 'channelId is required' });
+    }
+
+    try {
+        // 1. Fetch "Now Playing" data from Infomaniak's public API
+        const response = await axios.get(`https://api.radio-manager.net/radios/now_playing?radio_ids=${channelId}`);
+        const metadata = response.data[0]; // Assuming the first result is our channel
+        
+        if (!metadata || !metadata.title) {
+            return res.json({ show: false }); // No metadata, hide element
+        }
+        
+        // 2. Apply custom logic based on the config file
+        const result = applyRules(metadata, parseInt(channelId, 10));
+
+        // 3. Send the decision to the frontend
+        res.json(result);
+
+    } catch (error) {
+        console.error("Error fetching or processing metadata:", error.message);
+        res.status(500).json({ error: 'Failed to fetch metadata' });
+    }
+});
+
+function applyRules(metadata, channelId) {
+    const channelConfig = config.channels.find(c => c.id === channelId);
+
+    if (!channelConfig) {
+        return { show: false, reason: 'No config for this channel.' }; // Default: hide
+    }
+
+    const [artist, title] = metadata.title.split(' - ');
+
+    for (const rule of channelConfig.rules) {
+        if (rule.type === 'artist_exact_match' && artist && artist.trim().toLowerCase() === rule.value.toLowerCase()) {
+            return rule.display;
+        }
+        if (rule.type === 'title_contains' && title && title.toLowerCase().includes(rule.value.toLowerCase())) {
+            return rule.display;
+        }
+    }
+
+    // If no rules match, default to hiding the element
+    return { show: false, reason: 'No matching rules.' };
+}
+
 
 
 
