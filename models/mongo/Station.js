@@ -10,7 +10,7 @@ const NowPlayingSchema = new mongoose.Schema({
     coverUrl: { type: String }, // <-- THIS IS ESSENTIAL
     playedAt: { type: Number }, // <-- THIS IS ESSENTIAL
     duration: { type: Number }
-}, { _id: false });// Using _id: false prevents Mongoose from creating redundant IDs for these sub-documents
+});// Using _id: false prevents Mongoose from creating redundant IDs for these sub-documents
 
 const stationSchema = new mongoose.Schema({
     // e.g., "U80", "U90". We use this for easy lookups.

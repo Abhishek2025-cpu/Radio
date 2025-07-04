@@ -4,6 +4,7 @@ const connectMongo = require('./config/db.mongo');
 const express = require("express");
 const axios = require("axios");
 const multer = require('multer');
+const cron = require('node-cron');
 const fetch = require('node-fetch');
 const connectDB = require('./config/db.mongo');
 const Station = require('./models/mongo/Station');
@@ -366,70 +367,99 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
     try {
         const { stationId } = req.params;
 
-        // 1. FETCH the station from the database first
+        // 1. Fetch the station
         const station = await Station.findOne({ stationId: stationId.toUpperCase() });
-
         if (!station) {
             return res.status(404).json({ message: 'Station not found' });
         }
 
-        // 2. UPDATE the simple text fields if they were provided
-        const updatableFields = ['name', 'color', 'isVisible', 'customStreamUrl', 'infomaniakUrl'];
+        // 2. Update simple text fields
+        const updatableFields = ['name', 'color', 'isVisible'];
         updatableFields.forEach(field => {
             if (req.body[field] !== undefined) {
                 station[field] = req.body[field];
             }
         });
 
-        // The uploader puts all uploaded files into `req.files` (plural)
-        // It will be an object like: { thumbnail: [file], coverOverrideImage: [file] }
-
-        // 3. UPDATE the station thumbnail if a new one was uploaded
+        // 3. Update station thumbnail if provided
         if (req.files && req.files.thumbnail) {
-            station.thumbnailUrl = req.files.thumbnail[0].path; // Get the URL from Cloudinary
+            station.thumbnailUrl = req.files.thumbnail[0].path;
         }
 
-        // 4. UPDATE a specific song's cover in the nowPlaying array
-        const { coverOverrideTitle, coverOverrideArtist } = req.body;
-        const coverOverrideImageFile = req.files && req.files.coverOverrideImage 
-            ? req.files.coverOverrideImage[0] 
-            : null;
+        // 4. THE CORE CHANGE: Update a song's cover using its unique _id
+        const { coverOverrideSongId } = req.body;
+        const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
 
-        // We only perform the update if we have the title, artist, AND a new image file
-        if (coverOverrideTitle && coverOverrideArtist && coverOverrideImageFile) {
-            
-            // Find the specific song in the array
-            const songIndex = station.nowPlaying.findIndex(song => 
-                song.title === coverOverrideTitle && song.artist === coverOverrideArtist
-            );
+        if (coverOverrideSongId && coverOverrideImageFile) {
+            // Use Mongoose's .id() method to find the subdocument directly - it's fast and reliable
+            const songToUpdate = station.nowPlaying.id(coverOverrideSongId);
 
-            if (songIndex > -1) {
-                // If found, update its coverUrl with the new Cloudinary URL
-                station.nowPlaying[songIndex].coverUrl = coverOverrideImageFile.path;
-                console.log(`Successfully updated cover for '${coverOverrideTitle}'`);
+            if (songToUpdate) {
+                // If the song is found, update its coverUrl with the new Cloudinary URL
+                songToUpdate.coverUrl = coverOverrideImageFile.path;
+                console.log(`Successfully updated cover for song with ID: ${coverOverrideSongId}`);
             } else {
-                console.warn(`Could not find song '${coverOverrideTitle}' to update its cover.`);
+                console.warn(`Could not find song with _id '${coverOverrideSongId}' to update its cover.`);
             }
         }
         
-        // 5. SAVE all the changes back to the database
+        // 5. Save all changes
         const updatedStation = await station.save();
-
         res.status(200).json(updatedStation);
 
     } catch (err) {
-        // Log the detailed error on the server for debugging
         console.error('Update Station Error:', err);
-        
-        if (err.name === 'ValidationError') {
-            return res.status(400).json({ message: err.message });
-        }
-        // Send a generic error to the client
         res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
 
 
+// This task will run every 2 minutes. You can change the schedule.
+// '*/2 * * * *' = "At every 2nd minute."
+cron.schedule('*/2 * * * *', async () => {
+    console.log('Running scheduled job: Fetching latest metadata for all stations...');
+    
+    try {
+        // Find all stations that have an Infomaniak URL to check
+        const stationsToUpdate = await Station.find({ 
+            infomaniakUrl: { $exists: true, $ne: null } 
+        });
+
+        // Loop through each station and update its playlist
+        for (const station of stationsToUpdate) {
+            try {
+                const metadataResponse = await axios.get(station.infomaniakUrl);
+
+                if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
+                    // This is the same parsing logic from your create route
+                    const newNowPlaying = metadataResponse.data.data
+                        .filter(item => item.title && item.title.trim() !== '-' && item.cover)
+                        .map(item => {
+                            const parts = item.title.split(' - ');
+                            return {
+                                title: parts[0] ? parts[0].trim() : 'Unknown Title',
+                                artist: parts[1] ? parts[1].trim() : 'Unknown Artist',
+                                coverUrl: item.cover,
+                                playedAt: item.date,
+                                duration: item.duration
+                            };
+                        });
+                    
+                    // Replace the old playlist with the new one
+                    station.nowPlaying = newNowPlaying;
+                    await station.save();
+                    console.log(`Successfully updated playlist for: ${station.name}`);
+                }
+            } catch (error) {
+                // Log error for a single station but continue the job for others
+                console.error(`Failed to update metadata for ${station.name}:`, error.message);
+            }
+        }
+        console.log('Metadata update job finished.');
+    } catch (error) {
+        console.error('A critical error occurred during the metadata update job:', error);
+    }
+});
 
 
 
