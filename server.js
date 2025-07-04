@@ -423,8 +423,10 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
 
 // In your cron job file or wherever it's defined
 
+// In your cron job file
+
 cron.schedule('*/2 * * * *', async () => {
-    console.log('Running scheduled job: Fetching latest metadata for all stations...');
+    console.log('RUNNING THE CORRECT CRON JOB: Fetching latest metadata for all stations...');
     
     try {
         const stationsToUpdate = await Station.find({ 
@@ -433,10 +435,10 @@ cron.schedule('*/2 * * * *', async () => {
 
         for (const station of stationsToUpdate) {
             try {
-                // --- SMART UPDATE LOGIC ---
+                // Create a lookup map of existing overrides to preserve them
                 const overrideMap = station.nowPlaying.reduce((map, song) => {
                     if (song.coverUrlOverride) {
-                        const key = `${song.title}::${song.artist}`; // This key format is important
+                        const key = `${song.title}::${song.artist}`;
                         map[key] = song.coverUrlOverride;
                     }
                     return map;
@@ -447,40 +449,39 @@ cron.schedule('*/2 * * * *', async () => {
                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
                     
                     const newNowPlaying = metadataResponse.data.data
-                        // Filter out items that don't have a proper title or cover
+                        // ROBUST FILTER: Ensure title, a separator, and a cover exist
                         .filter(item => item.title && item.title.includes(' - ') && item.cover)
                         .map(item => {
-                            // --- THIS IS THE CRITICAL PARSING LOGIC ---
+                            // --- CRITICAL PARSING LOGIC ---
                             const parts = item.title.split(' - ');
                             const title = parts[0] ? parts[0].trim() : 'Unknown Title';
                             const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
-                            // ---------------------------------------------
                             
                             const key = `${title}::${artist}`;
                             const existingOverride = overrideMap[key];
 
-                            // Return a correctly structured song object
+                            // Return a CORRECTLY STRUCTURED song object
                             return {
-                                title: title,         // <-- Separate title
-                                artist: artist,       // <-- Separate artist
+                                title: title,         // Separate title
+                                artist: artist,       // Separate artist
                                 coverUrl: item.cover,
                                 coverUrlOverride: existingOverride, 
-                                playedAt: item.playedAt || item.date, // Use playedAt if available
+                                playedAt: item.date,
                                 duration: item.duration
                             };
                         });
                     
                     station.nowPlaying = newNowPlaying;
                     await station.save();
-                    console.log(`Successfully updated playlist for: ${station.name} (preserved overrides)`);
+                    console.log(`Successfully updated playlist for: ${station.name} with CORRECT parsing.`);
                 }
             } catch (error) {
                 console.error(`Failed to update metadata for ${station.name}:`, error.message);
             }
         }
-        console.log('Metadata update job finished.');
+        console.log('CORRECT metadata update job finished.');
     } catch (error) {
-        console.error('A critical error occurred during the metadata update job:', error);
+        console.error('A critical error occurred during the CORRECT metadata update job:', error);
     }
 });
 
