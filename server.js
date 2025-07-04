@@ -365,55 +365,80 @@ const updateFields = [
     { name: 'coverOverrideImage', maxCount: 1 }
 ];
 
+// In your main server file (e.g., app.js)
+
 app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields), async (req, res) => {
-    try {
-        const { stationId } = req.params;
-        const station = await Station.findOne({ stationId: stationId.toUpperCase() });
-        if (!station) {
-            return res.status(404).json({ message: 'Station not found' });
-        }
+    // <<-- WRAP THE ENTIRE LOGIC IN A RETRY LOOP -->>
+    let attempts = 0;
+    const maxAttempts = 3;
 
-        // ... (other field updates remain the same) ...
-        const updatableFields = ['name', 'color', 'isVisible'];
-        updatableFields.forEach(field => {
-            if (req.body[field] !== undefined) {
-                station[field] = req.body[field];
-            }
-        });
-        if (req.files && req.files.thumbnail) {
-            station.thumbnailUrl = req.files.thumbnail[0].path;
-        }
+    while (attempts < maxAttempts) {
+        try {
+            const { stationId } = req.params;
+            // Fetch the station inside the loop to get the latest version on retries
+            const station = await Station.findOne({ stationId: stationId.toUpperCase() });
 
-        // 4. THE CORE CHANGE: Find the song using stable identifiers
-        const { songTitle, songArtist, removeCoverOverride } = req.body;
-        const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
-
-        if (songTitle && songArtist) {
-            // Use Array.prototype.find() with stable fields
-            const songToUpdate = station.nowPlaying.find(
-                song => song.title === songTitle && song.artist === songArtist
-            );
-
-            if (!songToUpdate) {
-                return res.status(404).json({ message: `Song "${songTitle}" by "${songArtist}" not found in this station's playlist.` });
+            if (!station) {
+                // No need to retry if the station doesn't exist at all
+                return res.status(404).json({ message: 'Station not found' });
             }
 
-            // The rest of the logic is the same
-            if (coverOverrideImageFile) {
-                songToUpdate.coverUrlOverride = coverOverrideImageFile.path;
-                console.log(`Successfully set cover override for song: ${songToUpdate.title}`);
-            } else if (removeCoverOverride === 'true' || removeCoverOverride === true) {
-                songToUpdate.coverUrlOverride = undefined;
-                console.log(`Successfully removed cover override for song: ${songToUpdate.title}`);
+            // 1. Update simple text fields
+            const updatableFields = ['name', 'color', 'isVisible'];
+            updatableFields.forEach(field => {
+                if (req.body[field] !== undefined) {
+                    station[field] = req.body[field];
+                }
+            });
+
+            // 2. Update station thumbnail
+            if (req.files && req.files.thumbnail) {
+                station.thumbnailUrl = req.files.thumbnail[0].path;
+            }
+
+            // 3. Update song cover override
+            const { songTitle, songArtist, removeCoverOverride } = req.body;
+            const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
+
+            if (songTitle && songArtist) {
+                const songToUpdate = station.nowPlaying.find(
+                    song => song.title === songTitle && song.artist === songArtist
+                );
+
+                if (!songToUpdate) {
+                    return res.status(404).json({ message: `Song "${songTitle}" by "${songArtist}" not found in this station's playlist.` });
+                }
+
+                if (coverOverrideImageFile) {
+                    songToUpdate.coverUrlOverride = coverOverrideImageFile.path;
+                } else if (removeCoverOverride === 'true' || removeCoverOverride === true) {
+                    songToUpdate.coverUrlOverride = undefined;
+                }
+            }
+            
+            // 4. Save all changes
+            const updatedStation = await station.save();
+            
+            // If save is successful, send response and exit the loop
+            return res.status(200).json(updatedStation); 
+
+        } catch (err) {
+            // 5. Check if it's the specific versioning error
+            if (err.name === 'VersionError') {
+                attempts++;
+                console.warn(`API UPDATE CONFLICT: Version conflict for ${req.params.stationId}. Retrying... (Attempt ${attempts}/${maxAttempts})`);
+                if (attempts >= maxAttempts) {
+                    // If we failed after all retries, send a specific error
+                    return res.status(409).json({ message: 'Conflict: The station was updated by another process. Please try again.' });
+                }
+                // Wait a moment before retrying
+                await new Promise(resolve => setTimeout(resolve, 75));
+            } else {
+                // It's a different, unexpected error. Log it and send 500.
+                console.error('Update Station Error:', err);
+                return res.status(500).json({ message: 'An unexpected server error occurred.' });
             }
         }
-        
-        const updatedStation = await station.save();
-        res.status(200).json(updatedStation);
-
-    } catch (err) {
-        console.error('Update Station Error:', err);
-        res.status(500).json({ message: 'An unexpected server error occurred.' });
     }
 });
 
