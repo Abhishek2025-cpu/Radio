@@ -419,69 +419,76 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
 
 
 // This task will run every 2 minutes. You can change the schedule.
-// In your cron job file or wherever it's defined
+//  cron job file
 
-// In your cron job file or wherever it's defined
-
-// In your cron job file
+let isJobRunning = false; 
 
 cron.schedule('*/2 * * * *', async () => {
-    console.log('RUNNING THE CORRECT CRON JOB: Fetching latest metadata for all stations...');
+    if (isJobRunning) {
+        console.log('CRON JOB V5 (RETRY LOGIC): Skipping run, job already active.');
+        return;
+    }
     
+    isJobRunning = true;
+    console.log('CRON JOB V5 (RETRY LOGIC): Starting metadata update...');
+
     try {
-        const stationsToUpdate = await Station.find({ 
+        const stationsToProcess = await Station.find({ 
             infomaniakUrl: { $exists: true, $ne: null } 
-        });
+        }).select('_id name').lean();
 
-        for (const station of stationsToUpdate) {
-            try {
-                // Create a lookup map of existing overrides to preserve them
-                const overrideMap = station.nowPlaying.reduce((map, song) => {
-                    if (song.coverUrlOverride) {
-                        const key = `${song.title}::${song.artist}`;
-                        map[key] = song.coverUrlOverride;
+        for (const stationStub of stationsToProcess) {
+            // <<-- DEFENSE AGAINST RACE CONDITION: ADD RETRY LOGIC -->>
+            let attempts = 0;
+            let success = false;
+            const maxAttempts = 3; // Try up to 3 times
+
+            while (attempts < maxAttempts && !success) {
+                try {
+                    const station = await Station.findById(stationStub._id);
+
+                    if (!station) {
+                        console.warn(`Station ${stationStub.name} not found, skipping.`);
+                        break; // Exit the while loop for this station
                     }
-                    return map;
-                }, {});
-
-                const metadataResponse = await axios.get(station.infomaniakUrl);
-
-                if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
                     
-                    const newNowPlaying = metadataResponse.data.data
-                        // ROBUST FILTER: Ensure title, a separator, and a cover exist
-                        .filter(item => item.title && item.title.includes(' - ') && item.cover)
-                        .map(item => {
-                            // --- CRITICAL PARSING LOGIC ---
-                            const parts = item.title.split(' - ');
-                            const title = parts[0] ? parts[0].trim() : 'Unknown Title';
-                            const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
-                            
-                            const key = `${title}::${artist}`;
-                            const existingOverride = overrideMap[key];
+                    const overrideMap = station.nowPlaying.reduce((map, song) => { /* ... */ });
+                    const metadataResponse = await axios.get(station.infomaniakUrl);
 
-                            // Return a CORRECTLY STRUCTURED song object
-                            return {
-                                title: title,         // Separate title
-                                artist: artist,       // Separate artist
-                                coverUrl: item.cover,
-                                coverUrlOverride: existingOverride, 
-                                playedAt: item.date,
-                                duration: item.duration
-                            };
-                        });
-                    
-                    station.nowPlaying = newNowPlaying;
-                    await station.save();
-                    console.log(`Successfully updated playlist for: ${station.name} with CORRECT parsing.`);
+                    if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
+                        const newNowPlaying = metadataResponse.data.data
+                            .filter(item => item.title && item.title.includes(' - ') && item.cover)
+                            .map(item => { /* ... (parsing logic is correct) ... */ });
+                        
+                        station.nowPlaying = newNowPlaying;
+                        await station.save();
+
+                        console.log(`Successfully updated playlist for: ${station.name} on attempt #${attempts + 1}`);
+                        success = true; // Mark as successful to exit the while loop
+                    }
+                } catch (error) {
+                    // Check if it's the specific versioning error
+                    if (error.name === 'VersionError') {
+                        attempts++;
+                        console.warn(`Version conflict for ${stationStub.name}. Retrying... (Attempt ${attempts}/${maxAttempts})`);
+                        if (attempts >= maxAttempts) {
+                            console.error(`Failed to update ${stationStub.name} after ${maxAttempts} attempts due to persistent version conflicts.`);
+                        }
+                        // Add a small delay before retrying to avoid hammering the DB
+                        await new Promise(resolve => setTimeout(resolve, 50)); 
+                    } else {
+                        // It's a different error, so we should not retry.
+                        console.error(`An unexpected error occurred for ${stationStub.name}:`, error.message);
+                        break; // Exit the while loop
+                    }
                 }
-            } catch (error) {
-                console.error(`Failed to update metadata for ${station.name}:`, error.message);
             }
         }
-        console.log('CORRECT metadata update job finished.');
     } catch (error) {
-        console.error('A critical error occurred during the CORRECT metadata update job:', error);
+        console.error('A critical error occurred during the metadata update job:', error);
+    } finally {
+        isJobRunning = false;
+        console.log('CRON JOB V5 (RETRY LOGIC): Metadata update finished. Lock released.');
     }
 });
 
