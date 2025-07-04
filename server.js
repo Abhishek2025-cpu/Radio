@@ -358,10 +358,9 @@ app.get('/api/station/all', async (req, res) => {
 
 // // --- UPDATE an existing station ---
 const updateFields = [
-    { name: 'thumbnail', maxCount: 1 },          // For the main station image
-    { name: 'coverOverrideImage', maxCount: 1 }  // For a specific song's cover
+    { name: 'thumbnail', maxCount: 1 },
+    { name: 'coverOverrideImage', maxCount: 1 }
 ];
-
 
 app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields), async (req, res) => {
     try {
@@ -386,24 +385,32 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
             station.thumbnailUrl = req.files.thumbnail[0].path;
         }
 
-        // 4. THE CORE CHANGE: Update a song's cover using its unique _id
-        const { coverOverrideSongId } = req.body;
+        // 4. THE CORE CHANGE: Update or Remove a song's cover override using its _id
+        const { coverOverrideSongId, removeCoverOverride } = req.body;
         const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
 
-        if (coverOverrideSongId && coverOverrideImageFile) {
-            // Use Mongoose's .id() method to find the subdocument directly - it's fast and reliable
+        if (coverOverrideSongId) {
+            // Find the specific song subdocument within the nowPlaying array
             const songToUpdate = station.nowPlaying.id(coverOverrideSongId);
 
-            if (songToUpdate) {
-                // If the song is found, update its coverUrl with the new Cloudinary URL
-                songToUpdate.coverUrl = coverOverrideImageFile.path;
-                console.log(`Successfully updated cover for song with ID: ${coverOverrideSongId}`);
-            } else {
-                console.warn(`Could not find song with _id '${coverOverrideSongId}' to update its cover.`);
+            if (!songToUpdate) {
+                // To be safe, we stop here if the song isn't found in the current playlist
+                return res.status(404).json({ message: `Song with ID ${coverOverrideSongId} not found in this station's playlist.` });
+            }
+
+            // Scenario A: A new image file is uploaded to set/change the override
+            if (coverOverrideImageFile) {
+                songToUpdate.coverUrlOverride = coverOverrideImageFile.path; // Use the Cloudinary path
+                console.log(`Successfully set cover override for song: ${songToUpdate.title}`);
+            
+            // Scenario B: A request is made to remove the existing override
+            } else if (removeCoverOverride === 'true' || removeCoverOverride === true) {
+                songToUpdate.coverUrlOverride = undefined; // Mongoose knows to remove the field on save
+                console.log(`Successfully removed cover override for song: ${songToUpdate.title}`);
             }
         }
         
-        // 5. Save all changes
+        // 5. Save all changes to the station and its subdocuments
         const updatedStation = await station.save();
         res.status(200).json(updatedStation);
 
@@ -415,43 +422,66 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
 
 
 // This task will run every 2 minutes. You can change the schedule.
-// '*/2 * * * *' = "At every 2nd minute."
+// In your cron job file or wherever it's defined
+
 cron.schedule('*/2 * * * *', async () => {
     console.log('Running scheduled job: Fetching latest metadata for all stations...');
     
     try {
-        // Find all stations that have an Infomaniak URL to check
         const stationsToUpdate = await Station.find({ 
             infomaniakUrl: { $exists: true, $ne: null } 
         });
 
-        // Loop through each station and update its playlist
         for (const station of stationsToUpdate) {
             try {
+                // --- SMART UPDATE LOGIC ---
+
+                // 1. Create a lookup map of existing overrides.
+                // The key is a unique identifier for a song (e.g., 'Title::Artist').
+                // The value is the custom override URL.
+                const overrideMap = station.nowPlaying.reduce((map, song) => {
+                    if (song.coverUrlOverride) {
+                        const key = `${song.title}::${song.artist}`;
+                        map[key] = song.coverUrlOverride;
+                    }
+                    return map;
+                }, {});
+
+                // 2. Fetch the new playlist data from the external API
                 const metadataResponse = await axios.get(station.infomaniakUrl);
 
                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
-                    // This is the same parsing logic from your create route
+                    
+                    // 3. Parse the new data and merge with existing overrides
                     const newNowPlaying = metadataResponse.data.data
                         .filter(item => item.title && item.title.trim() !== '-' && item.cover)
                         .map(item => {
                             const parts = item.title.split(' - ');
+                            const title = parts[0] ? parts[0].trim() : 'Unknown Title';
+                            const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
+                            
+                            // Create the same key to look for an override
+                            const key = `${title}::${artist}`;
+                            const existingOverride = overrideMap[key];
+
+                            // Build the new song object
                             return {
-                                title: parts[0] ? parts[0].trim() : 'Unknown Title',
-                                artist: parts[1] ? parts[1].trim() : 'Unknown Artist',
-                                coverUrl: item.cover,
+                                title: title,
+                                artist: artist,
+                                coverUrl: item.cover, // The original URL
+                                // If an override exists for this song, apply it!
+                                coverUrlOverride: existingOverride, 
                                 playedAt: item.date,
                                 duration: item.duration
                             };
                         });
                     
-                    // Replace the old playlist with the new one
+                    // 4. Replace the old playlist with the new, smarter one
                     station.nowPlaying = newNowPlaying;
                     await station.save();
-                    console.log(`Successfully updated playlist for: ${station.name}`);
+                    console.log(`Successfully updated playlist for: ${station.name} (preserved overrides)`);
                 }
             } catch (error) {
-                // Log error for a single station but continue the job for others
                 console.error(`Failed to update metadata for ${station.name}:`, error.message);
             }
         }
@@ -460,7 +490,6 @@ cron.schedule('*/2 * * * *', async () => {
         console.error('A critical error occurred during the metadata update job:', error);
     }
 });
-
 
 
 
