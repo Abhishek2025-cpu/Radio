@@ -421,6 +421,8 @@ app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields)
 // This task will run every 2 minutes. You can change the schedule.
 // In your cron job file or wherever it's defined
 
+// In your cron job file or wherever it's defined
+
 cron.schedule('*/2 * * * *', async () => {
     console.log('Running scheduled job: Fetching latest metadata for all stations...');
     
@@ -432,48 +434,42 @@ cron.schedule('*/2 * * * *', async () => {
         for (const station of stationsToUpdate) {
             try {
                 // --- SMART UPDATE LOGIC ---
-
-                // 1. Create a lookup map of existing overrides.
-                // The key is a unique identifier for a song (e.g., 'Title::Artist').
-                // The value is the custom override URL.
                 const overrideMap = station.nowPlaying.reduce((map, song) => {
                     if (song.coverUrlOverride) {
-                        const key = `${song.title}::${song.artist}`;
+                        const key = `${song.title}::${song.artist}`; // This key format is important
                         map[key] = song.coverUrlOverride;
                     }
                     return map;
                 }, {});
 
-                // 2. Fetch the new playlist data from the external API
                 const metadataResponse = await axios.get(station.infomaniakUrl);
 
                 if (metadataResponse.data && Array.isArray(metadataResponse.data.data)) {
                     
-                    // 3. Parse the new data and merge with existing overrides
                     const newNowPlaying = metadataResponse.data.data
-                        .filter(item => item.title && item.title.trim() !== '-' && item.cover)
+                        // Filter out items that don't have a proper title or cover
+                        .filter(item => item.title && item.title.includes(' - ') && item.cover)
                         .map(item => {
+                            // --- THIS IS THE CRITICAL PARSING LOGIC ---
                             const parts = item.title.split(' - ');
                             const title = parts[0] ? parts[0].trim() : 'Unknown Title';
                             const artist = parts[1] ? parts[1].trim() : 'Unknown Artist';
+                            // ---------------------------------------------
                             
-                            // Create the same key to look for an override
                             const key = `${title}::${artist}`;
                             const existingOverride = overrideMap[key];
 
-                            // Build the new song object
+                            // Return a correctly structured song object
                             return {
-                                title: title,
-                                artist: artist,
-                                coverUrl: item.cover, // The original URL
-                                // If an override exists for this song, apply it!
+                                title: title,         // <-- Separate title
+                                artist: artist,       // <-- Separate artist
+                                coverUrl: item.cover,
                                 coverUrlOverride: existingOverride, 
-                                playedAt: item.date,
+                                playedAt: item.playedAt || item.date, // Use playedAt if available
                                 duration: item.duration
                             };
                         });
                     
-                    // 4. Replace the old playlist with the new, smarter one
                     station.nowPlaying = newNowPlaying;
                     await station.save();
                     console.log(`Successfully updated playlist for: ${station.name} (preserved overrides)`);
