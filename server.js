@@ -357,6 +357,9 @@ app.get('/api/station/all', async (req, res) => {
 });
 
 // // --- UPDATE an existing station ---
+// In your main server file (e.g., app.js)
+
+// No changes needed for multer setup
 const updateFields = [
     { name: 'thumbnail', maxCount: 1 },
     { name: 'coverOverrideImage', maxCount: 1 }
@@ -365,52 +368,46 @@ const updateFields = [
 app.put('/api/station/:stationId', stationThumbnailUploader.fields(updateFields), async (req, res) => {
     try {
         const { stationId } = req.params;
-
-        // 1. Fetch the station
         const station = await Station.findOne({ stationId: stationId.toUpperCase() });
         if (!station) {
             return res.status(404).json({ message: 'Station not found' });
         }
 
-        // 2. Update simple text fields
+        // ... (other field updates remain the same) ...
         const updatableFields = ['name', 'color', 'isVisible'];
         updatableFields.forEach(field => {
             if (req.body[field] !== undefined) {
                 station[field] = req.body[field];
             }
         });
-
-        // 3. Update station thumbnail if provided
         if (req.files && req.files.thumbnail) {
             station.thumbnailUrl = req.files.thumbnail[0].path;
         }
 
-        // 4. THE CORE CHANGE: Update or Remove a song's cover override using its _id
-        const { coverOverrideSongId, removeCoverOverride } = req.body;
+        // 4. THE CORE CHANGE: Find the song using stable identifiers
+        const { songTitle, songArtist, removeCoverOverride } = req.body;
         const coverOverrideImageFile = req.files && req.files.coverOverrideImage ? req.files.coverOverrideImage[0] : null;
 
-        if (coverOverrideSongId) {
-            // Find the specific song subdocument within the nowPlaying array
-            const songToUpdate = station.nowPlaying.id(coverOverrideSongId);
+        if (songTitle && songArtist) {
+            // Use Array.prototype.find() with stable fields
+            const songToUpdate = station.nowPlaying.find(
+                song => song.title === songTitle && song.artist === songArtist
+            );
 
             if (!songToUpdate) {
-                // To be safe, we stop here if the song isn't found in the current playlist
-                return res.status(404).json({ message: `Song with ID ${coverOverrideSongId} not found in this station's playlist.` });
+                return res.status(404).json({ message: `Song "${songTitle}" by "${songArtist}" not found in this station's playlist.` });
             }
 
-            // Scenario A: A new image file is uploaded to set/change the override
+            // The rest of the logic is the same
             if (coverOverrideImageFile) {
-                songToUpdate.coverUrlOverride = coverOverrideImageFile.path; // Use the Cloudinary path
+                songToUpdate.coverUrlOverride = coverOverrideImageFile.path;
                 console.log(`Successfully set cover override for song: ${songToUpdate.title}`);
-            
-            // Scenario B: A request is made to remove the existing override
             } else if (removeCoverOverride === 'true' || removeCoverOverride === true) {
-                songToUpdate.coverUrlOverride = undefined; // Mongoose knows to remove the field on save
+                songToUpdate.coverUrlOverride = undefined;
                 console.log(`Successfully removed cover override for song: ${songToUpdate.title}`);
             }
         }
         
-        // 5. Save all changes to the station and its subdocuments
         const updatedStation = await station.save();
         res.status(200).json(updatedStation);
 
