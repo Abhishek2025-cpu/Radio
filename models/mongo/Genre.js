@@ -1,11 +1,20 @@
 const mongoose = require('mongoose');
 
-const GenreSchema = new mongoose.Schema({
-  name: { type: String, required: true, unique: true },
-  coverImageUrl: { type: String, required: false },
+const genreSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: true,
+        unique: true // e.g., "U MORNING"
+    },
+    description: {
+        type: String
+    },
+    imageUrl: {
+        type: String, // URL to the genre's image
+        required: true
+    }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Genre', GenreSchema);
-
+module.exports = mongoose.model('Genre', genreSchema);
 
 
