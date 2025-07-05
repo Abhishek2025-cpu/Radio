@@ -603,6 +603,38 @@ function applyRules(metadata, channelId) {
     return { show: false, reason: 'No matching rules.' };
 }
 
+//////////////////////////PODCAST-API//////////////////////////////////////////////////////////////
+
+const PodcastService = require("./services/podcastService");
+
+
+const podcastService = new PodcastService();
+
+app.use(express.json());
+
+app.get("/api/podcast/latest", async (req, res) => {
+  const latest = await podcastService.getLatestFiles();
+  res.json(latest);
+});
+
+app.get("/api/podcast/:category", (req, res) => {
+  const { category } = req.params;
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 500;
+  const result = podcastService.getFilesByCategory(category, page, size);
+  res.json(result);
+});
+
+app.get("/api/podcast/all", (req, res) => {
+  const result = podcastService.getAllFiles();
+  res.json(result);
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+
 
 
 
