@@ -609,7 +609,7 @@ const PodcastService = require("./services/podcastService");
 
 
 // Main async function to start the application
-async function main() {
+
   console.log("Creating PodcastService instance...");
   const podcastService = new PodcastService();
 
@@ -637,7 +637,7 @@ async function main() {
     const result = podcastService.getAllFiles();
     res.json(result);
   });
-}
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
