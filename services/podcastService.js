@@ -1,6 +1,12 @@
 const ftp = require("basic-ftp");
 
 class PodcastService {
+    async initialize() {
+    console.log("Initializing PodcastService and performing first cache refresh...");
+    await this.refreshCache();
+    // Start the recurring refresh AFTER the first one is complete.
+    setInterval(() => this.refreshCache(), 600000); // Refresh every 10 minutes
+  }
   constructor() {
     // Credentials and config are fine.
     this.BASE_URL = "https://podcast.youradio.ma";
@@ -36,6 +42,8 @@ class PodcastService {
       "/podcasts/U MORNING/VRAI OU FAUX/",
       "/podcasts/U MORNING/WACH KANET FERASSEK/"
     ];
+
+    
 
     // The cache will be our single source of truth.
     // Let's store all podcasts in a single flat array for easier processing.
