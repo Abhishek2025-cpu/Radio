@@ -608,35 +608,27 @@ function applyRules(metadata, channelId) {
 const PodcastService = require("./services/podcastService");
 
 
-// Main async function to start the application
+const podcastService = new PodcastService();
 
-  console.log("Creating PodcastService instance...");
-  const podcastService = new PodcastService();
 
-  // *** THIS IS THE CRITICAL STEP ***
-  // Wait for the service to finish its initial data load.
-  await podcastService.initialize();
 
-  console.log("Initialization complete. Setting up API routes.");
+app.get("/api/podcast/latest", async (req, res) => {
+  const latest = await podcastService.getLatestFiles();
+  res.json(latest);
+});
 
-  // --- Your API routes ---
-  app.get("/api/podcast/latest", (req, res) => { // This is NOT async anymore
-    const latest = podcastService.getLatestFiles();
-    res.json(latest);
-  });
+app.get("/api/podcast/:category", (req, res) => {
+  const { category } = req.params;
+  const page = parseInt(req.query.page) || 0;
+  const size = parseInt(req.query.size) || 500;
+  const result = podcastService.getFilesByCategory(category, page, size);
+  res.json(result);
+});
 
-  app.get("/api/podcast/:category", (req, res) => {
-    const { category } = req.params;
-    const page = parseInt(req.query.page) || 0;
-    const size = parseInt(req.query.size) || 500;
-    const result = podcastService.getFilesByCategory(category, page, size);
-    res.json(result);
-  });
-
-  app.get("/api/podcast/all", (req, res) => {
-    const result = podcastService.getAllFiles();
-    res.json(result);
-  });
+app.get("/api/podcast/all", (req, res) => {
+  const result = podcastService.getAllFiles();
+  res.json(result);
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
