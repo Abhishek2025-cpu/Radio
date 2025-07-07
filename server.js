@@ -554,7 +554,7 @@ app.delete('/api/station/:stationId', async (req, res) => {
 });
 
 app.get('/api/metadata-check', async (req, res) => {
-    const { channelId } = req.query;
+    const channelId = req.query.channelId || req.query.channelID;
 
     if (!channelId) {
         return res.status(400).json({ error: 'channelId is required' });
