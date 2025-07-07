@@ -610,7 +610,7 @@ const PodcastService = require("./services/podcastService");
 
 const podcastService = new PodcastService();
 
-app.use(express.json());
+
 
 app.get("/api/podcast/latest", async (req, res) => {
   const latest = await podcastService.getLatestFiles();
