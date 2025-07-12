@@ -1,6 +1,6 @@
 const cron = require('node-cron');
-const Website = require('../models/Website');
-const Voter = require('../models/Voter'); // We might not need this if TTL index works perfectly, but good for a manual reset.
+const Website = require('../models/mongo/Website');
+const Voter = require('../models/mongo/Voter'); // We might not need this if TTL index works perfectly, but good for a manual reset.
 
 /**
  * This function resets all website vote counts to 0.
