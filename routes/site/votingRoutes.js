@@ -5,7 +5,7 @@ const { voteForWebsite } = require('../../controllers/site/votingController'); /
 // @route   POST /api/websites/:id/vote
 // @desc    Register a vote for a website
 // @access  Public
-router.post('artist/:id/vote', voteForWebsite);
+router.post('/artist/:id/vote', voteForWebsite);
 
 // You can add other routes here later, for example:
 // router.get('/', getAllWebsites); 
