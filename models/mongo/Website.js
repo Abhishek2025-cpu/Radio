@@ -1,10 +1,19 @@
 const mongoose = require('mongoose');
 
-const WebsiteSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  url: { type: String }, // remove required: true
-  votes: { type: Number, default: 0 },
+const websiteSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  url: {
+    type: String,
+  
+  },
+  votes: {
+    type: Number,
+    default: 0
+  }
 });
-
 
 module.exports = mongoose.model('Website', websiteSchema);
