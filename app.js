@@ -27,6 +27,17 @@ const newsRoutes = require('./routes/app/news.routes');
 const radioRoutes = require('./routes/app/radio'); 
 app.use('/api', radioRoutes);
 
+app.use('/api/app', newsRoutes);
+app.use("/api/radio-stations", radioStationsRoutes);
+// app.use('/api/podcast', podcastRoutes);
+
+app.use('/api/app', appBannerRoutes);
+app.use('/api/site', siteBannerRoutes);
+app.use('/api/form', require('./routes/app/FormSubmit'));
+app.use('/api/artists', artistRoutes);
+app.use('/api/websites', require('./routes/site/votingRoutes'));
+require('./services/scheduler'); 
+
 
 
 io.on("connection", (socket) => {
@@ -44,16 +55,6 @@ io.on("connection", (socket) => {
 
 
 
-app.use('/api/app', newsRoutes);
-app.use("/api/radio-stations", radioStationsRoutes);
-// app.use('/api/podcast', podcastRoutes);
-
-app.use('/api/app', appBannerRoutes);
-app.use('/api/site', siteBannerRoutes);
-app.use('/api/form', require('./routes/app/FormSubmit'));
-app.use('/api/artists', artistRoutes);
-app.use('/api/websites', require('./routes/site/votingRoutes'));
-require('./services/scheduler'); 
 
 
 
