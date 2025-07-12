@@ -1,5 +1,5 @@
-const Website = require('../models/Website');
-const Voter = require('../models/Voter');
+const Website = require('../../models/mongo/Website');
+const Voter = require('../../models/mongo/Voter');
 const bcrypt = require('bcryptjs'); // Using bcrypt for hashing
 
 /**

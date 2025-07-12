@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { voteForWebsite } = require('../controllers/votingController'); // Adjust path if needed
+const { voteForWebsite } = require('../../controllers/site/votingController'); // Adjust path if needed
 
 // @route   POST /api/websites/:id/vote
 // @desc    Register a vote for a website
