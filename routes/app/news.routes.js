@@ -19,7 +19,7 @@ const {
   updateNews,
   toggleNewsVisibility,
   getAllNewsAdmin,
-  deleteNews
+  deleteNews,
 } = require('../../controllers/app/news.Controller');
 
 // Define a reusable upload middleware with error handling
@@ -66,7 +66,7 @@ router.put(
 
 // --- The rest of your routes remain the same ---
 router.get('/get-news', getAllNews);
-router.get('/get-news/admin',getAllNewsAdmin);
+router.get('/get-news/admin', getAllNewsAdmin);
 router.get('/get-news/:id', getSingleNews);
 router.patch('/toggle-news/:id', toggleNewsVisibility);
 router.delete('/delete-news/:id', deleteNews);
