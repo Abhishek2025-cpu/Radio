@@ -13,6 +13,8 @@ const server = http.createServer(app);
 const io = socket.init(server);
 connectDB();
 const { getFiles, getAllFiles } = require("./controllers/app/podcastService");
+const podcastRoutes = require('./routes/app/podcast.routes');
+app.use('/api/podcasts',podcastRoutes);
 
 app.use(cors());
 app.use(express.json());
