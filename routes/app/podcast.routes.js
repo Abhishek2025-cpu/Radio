@@ -6,33 +6,44 @@ const router = express.Router();
 const {
   createPodcast,
   getAllPodcasts,
-  getPodcastByPath, // <-- Import the new function
+  getPodcastByPath,
   updatePodcast,
   deletePodcast,
   togglePodcastStatus
-} = require('../../controllers/app/podcast.controller');
+} = require('../../controllers/app/podcast.controller'); // Assuming your controller path is correct
 
-// routes/podcast.routes.js
+// ===================================
+//  PUBLIC ROUTES (for fetching data)
+// ===================================
 
-// Base route: /api/podcasts
-// Route to get the entire podcast tree
-// Mapped to: GET /api/podcasts/
+// Get the entire podcast tree for navigation
+// Mapped to: GET /api/podcasts/all
 router.get('/all', getAllPodcasts);
 
-// Route to get a specific podcast and its children by its URL path
+// Get a specific podcast and its children by its URL path
 // Mapped to: GET /api/podcasts/by-path/*
 router.get('/by-path/*', getPodcastByPath);
 
 
+// ===================================
+//  ADMIN ROUTES (for managing content)
+// ===================================
 
+// ** NEW **: Route to create a new podcast
+// Mapped to: POST /api/podcasts/create
+router.post('/create', createPodcast);
+
+// Route to update a podcast by its ID
+// Mapped to: PUT /api/podcasts/update/:id
 router.put('/update/:id', updatePodcast);
 
 // Route to delete a podcast by its ID
-// Mapped to: DELETE /api/podcasts/:id
+// Mapped to: DELETE /api/podcasts/delete/:id
 router.delete('/delete/:id', deletePodcast);
 
-// Route to toggle a podcast's active status
-// Mapped to: PATCH /api/podcasts/:id/status
-router.patch('/:id/status', togglePodcastStatus);
+// ** REVISED for consistency **: Route to toggle a podcast's active status
+// Mapped to: PATCH /api/podcasts/toggle-status/:id
+router.patch('/toggle-status/:id', togglePodcastStatus);
+
 
 module.exports = router;
