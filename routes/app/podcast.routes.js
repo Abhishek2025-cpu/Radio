@@ -22,7 +22,7 @@ router.get('/all', getAllPodcasts);
 
 // Get a specific podcast and its children by its URL path
 // Mapped to: GET /api/podcasts/by-path/*
-router.get('/by-path/', getPodcastByPath);
+router.get('/by-path', getPodcastByPath);
 
 
 // ===================================
