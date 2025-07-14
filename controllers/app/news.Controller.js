@@ -130,14 +130,7 @@ exports.updateNews = async (req, res) => {
 
 // --- The rest of the functions are simple and likely correct ---
 
-exports.getAllNews = async (req, res) => {
-  try {
-    const news = await News.find({ visible: true }).sort({ createdAt: -1 });
-    res.status(200).json(news);
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to fetch news', details: err.message });
-  }
-};
+
 
 // Public API: Only visible news
 exports.getAllNews = async (req, res) => {
