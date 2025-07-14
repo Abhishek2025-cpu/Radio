@@ -8,8 +8,9 @@ const {
   createPodcast,
   getAllPodcasts,
   getPodcastByPath,
-  updatePodcast,
+//   updatePodcast,
   deletePodcast,
+   getUniqueGenres,
   togglePodcastStatus
 } = require('../../controllers/app/podcast.controller'); // Assuming your controller path is correct
 
@@ -20,6 +21,7 @@ const {
 // Get the entire podcast tree for navigation
 // Mapped to: GET /api/podcasts/all
 router.get('/all', getAllPodcasts);
+router.get('/unique-genres', getUniqueGenres);
 
 // Get a specific podcast and its children by its URL path
 // Mapped to: GET /api/podcasts/by-path/*

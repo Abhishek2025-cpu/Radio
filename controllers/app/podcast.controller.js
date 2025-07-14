@@ -69,6 +69,23 @@ exports.getAllPodcasts = async (req, res) => {
   }
 };
 
+
+exports.getUniqueGenres = async (req, res) => {
+  try {
+    const podcasts = await Podcast.find().select('genre').lean();
+
+    // Extract unique genres using Set
+    const uniqueGenres = [...new Set(podcasts.map(p => p.genre).filter(Boolean))];
+
+    res.status(200).json({
+      count: uniqueGenres.length,
+      genres: uniqueGenres,
+    });
+  } catch (error) {
+    console.error('Error fetching unique genres:', error);
+    res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
+  }
+};
 /**
  * @desc    Update a podcast
  * @route   PUT /api/podcasts/:id
