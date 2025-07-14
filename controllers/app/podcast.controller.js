@@ -77,26 +77,31 @@ exports.getAllPodcasts = async (req, res) => {
 exports.updatePodcast = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, parent, image, episodes } = req.body;
 
-    // Build the update object dynamically
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (parent !== undefined) updateData.parent = parent; // Allow setting parent to null
-    if (image) updateData.image = image;
-    if (episodes) updateData.episodes = episodes;
-
-    const podcast = await Podcast.findByIdAndUpdate(id, updateData, {
-      new: true, // Return the updated document
-      runValidators: true,
-    });
-
+    // Find the podcast item to update
+    const podcast = await Podcast.findById(id);
     if (!podcast) {
-      return res.status(404).json({ message: 'Podcast not found' });
+      return res.status(404).json({ message: 'Podcast item not found' });
     }
 
-    res.status(200).json(podcast);
+    // Get text data from the request body
+    const { name, parent } = req.body;
+
+    // Update text fields if they were provided in the form-data
+    if (name) podcast.name = name;
+    if (parent) podcast.parent = parent; // Allows moving an item to a different parent
+
+    // Handle the image upload
+    // If a new image file was sent, our middleware provides its Cloudinary URL
+    if (req.file) {
+      podcast.image = req.file.path;
+    }
+
+    const updatedPodcast = await podcast.save();
+    res.status(200).json(updatedPodcast);
+
   } catch (error) {
+    console.error('Error updating podcast:', error);
     res.status(500).json({ message: 'Error updating podcast', error: error.message });
   }
 };

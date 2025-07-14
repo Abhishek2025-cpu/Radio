@@ -1,7 +1,4 @@
-// models/podcast.model.js
-
 const mongoose = require('mongoose');
-const slugify = require('slugify');
 
 const podcastSchema = new mongoose.Schema(
   {
@@ -18,10 +15,13 @@ const podcastSchema = new mongoose.Schema(
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Podcast',
-      default: null,
+      default: null, // A null parent IS a top-level category/genre
     },
+    // The image field holds the URL for this specific item.
+    // If it's a category, this is the category image.
+    // If it's a sub-show, it can have its own image too.
     image: {
-      type: String,
+      type: String, 
       default: '',
     },
     isActive: {
@@ -42,19 +42,7 @@ const podcastSchema = new mongoose.Schema(
   }
 );
 
-// Middleware to automatically create a slug from the name before saving
-podcastSchema.pre('validate', function (next) { // Changed to pre-validate to ensure slug is present for index
-  if (this.isModified('name')) {
-    this.slug = slugify(this.name, { lower: true, strict: true });
-  }
-  next();
-});
-
-// *** NEW: Create a compound index for data integrity ***
-// This ensures that the combination of a parent and a slug is unique.
-// You can have a slug 'l-integrale' under 'U MORNING' and another 'l-integrale' under 'RAMADAN', but not two 'l-integrale' under 'U MORNING'.
-podcastSchema.index({ parent: 1, slug: 1 }, { unique: true });
+// ... rest of your model file (indexes, pre-save hooks) ...
 
 const Podcast = mongoose.model('Podcast', podcastSchema);
-
 module.exports = Podcast;
