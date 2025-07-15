@@ -23,7 +23,7 @@ getAllPodcastsAdmin,
 // Get the entire podcast tree for navigation
 // Mapped to: GET /api/podcasts/all
 router.get('/all', getAllActivePodcasts);
-router.get('admin',getAllPodcastsAdmin);
+router.get('/admin',getAllPodcastsAdmin);
 router.get('/unique-genres', getUniqueGenres);
 router.get("/subgenre/:genreName",getSubgenresByGenreName);
 
