@@ -96,14 +96,14 @@ exports.getSubgenresByGenreName = async (req, res) => {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
-    // Step 1: Find the genre by name
-    const genre = await Podcast.findOne({ name: genreName, parent: null }).lean();
+    // Find the genre by `genre` field and ensure it's a root (parent: null)
+    const genre = await Podcast.findOne({ genre: genreName, parent: null }).lean();
 
     if (!genre) {
       return res.status(404).json({ message: "Genre not found." });
     }
 
-    // Step 2: Find all subgenres linked to this genre's _id
+    // Fetch all subgenres with parent equal to genre._id
     const subgenres = await Podcast.find({ parent: genre._id }).lean();
 
     res.status(200).json({
@@ -114,6 +114,7 @@ exports.getSubgenresByGenreName = async (req, res) => {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
   }
 };
+
 
 /**
  * @desc    Update a podcast
