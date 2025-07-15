@@ -96,24 +96,25 @@ exports.getSubgenresByGenreName = async (req, res) => {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
-    // Find the parent genre by `name` and `parent: null`
-    const genre = await Podcast.findOne({ name: genreName, parent: null }).lean();
+    const subgenres = await Podcast.find({ genre: genreName, subgenre: { $exists: true, $ne: "" } })
+      .select("subgenre")
+      .lean();
 
-    if (!genre) {
-      return res.status(404).json({ message: "Genre not found." });
+    const uniqueSubgenres = [...new Set(subgenres.map(item => item.subgenre).filter(Boolean))];
+
+    if (uniqueSubgenres.length === 0) {
+      return res.status(404).json({ message: "No subgenres found for this genre." });
     }
 
-    // Fetch subgenres where parent equals genre._id
-    const subgenres = await Podcast.find({ parent: genre._id }).lean();
-
     res.status(200).json({
-      count: subgenres.length,
-      data: subgenres,
+      count: uniqueSubgenres.length,
+      subgenres: uniqueSubgenres,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
   }
 };
+
 
 
 /**
