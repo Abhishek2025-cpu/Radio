@@ -6,7 +6,7 @@ const router = express.Router();
 
 const {
   createPodcast,
-  getAllActivePodcasts,
+  getAllPodcasts,
   getPodcastByPath,
 //   updatePodcast,
 getAllPodcastsAdmin,
@@ -22,7 +22,7 @@ getAllPodcastsAdmin,
 
 // Get the entire podcast tree for navigation
 // Mapped to: GET /api/podcasts/all
-router.get('/all', getAllActivePodcasts);
+router.get('/all', getAllPodcasts);
 router.get('/admin',getAllPodcastsAdmin);
 router.get('/unique-genres', getUniqueGenres);
 router.get("/subgenre/:genreName",getSubgenresByGenreName);
