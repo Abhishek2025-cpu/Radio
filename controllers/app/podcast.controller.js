@@ -29,32 +29,46 @@ exports.createPodcast = async (req, res) => {
  * @desc    Get all podcasts as a nested tree structure
  * @route   GET /api/podcasts
  * @access  Public
+ * 
+ * 
+ * 
  */
-exports.getAllPodcasts = async (req, res) => {
+exports.getAllPodcastsAdmin = async (req, res) => {
   try {
-    const podcasts = await Podcast.find().lean(); // .lean() for faster read-only operations
+    const podcasts = await Podcast.find().lean();
 
-    // Helper function to build the tree
+    res.status(200).json({
+      count: podcasts.length,
+      data: podcasts,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching podcasts', error: error.message });
+  }
+};
+
+
+
+exports.getAllActivePodcasts = async (req, res) => {
+  try {
+    const podcasts = await Podcast.find({ isActive: true }).lean();
+
     const buildTree = (list) => {
       const map = {};
       const roots = [];
 
       list.forEach((item, i) => {
-        map[item._id] = i; // Use map to look up the index of each item
-        item.children = []; // Initialize children array
+        map[item._id] = i;
+        item.children = [];
       });
 
       list.forEach((item) => {
-        if (item.parent) {
-          // If it's a child, push it to its parent's children array
-          if(list[map[item.parent]]) {
-            list[map[item.parent]].children.push(item);
-          }
+        if (item.parent && map[item.parent] !== undefined) {
+          list[map[item.parent]].children.push(item);
         } else {
-          // If it's a root node, push it to the roots array
           roots.push(item);
         }
       });
+
       return roots;
     };
 
@@ -65,7 +79,7 @@ exports.getAllPodcasts = async (req, res) => {
       data: podcastTree,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching podcasts', error: error.message });
+    res.status(500).json({ message: 'Error fetching active podcasts', error: error.message });
   }
 };
 
