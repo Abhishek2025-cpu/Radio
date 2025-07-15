@@ -11,7 +11,7 @@ const {
 //   updatePodcast,
   deletePodcast,
    getUniqueGenres,
-   getSubgenresByGenre,
+   getSubgenresByGenreName,
   togglePodcastStatus
 } = require('../../controllers/app/podcast.controller'); // Assuming your controller path is correct
 
@@ -23,7 +23,7 @@ const {
 // Mapped to: GET /api/podcasts/all
 router.get('/all', getAllPodcasts);
 router.get('/unique-genres', getUniqueGenres);
-router.get("/subgenres/:genreId",getSubgenresByGenre);
+router.get("/subgenres/:genreId",getSubgenresByGenreName);
 
 
 // Get a specific podcast and its children by its URL path
