@@ -23,7 +23,7 @@ const {
 // Mapped to: GET /api/podcasts/all
 router.get('/all', getAllPodcasts);
 router.get('/unique-genres', getUniqueGenres);
-router.get("/subgenres/:genreId",getSubgenresByGenreName);
+router.get("/subgenre/:genreName",getSubgenresByGenreName);
 
 
 // Get a specific podcast and its children by its URL path
