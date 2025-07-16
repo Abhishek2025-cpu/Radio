@@ -538,16 +538,19 @@ exports.toggleGenreShow = async (req, res) => {
     const { showId } = req.params;
     const { status } = req.body;
 
+    if (!showId) {
+      return res.status(400).json({ message: "Show ID is required." });
+    }
+
     const visible = status === "true";
 
-    if (showId.startsWith("podcast-")) {
-      const subgenreId = showId; // keep it exactly as received
-
-      let override = await GenreShowOverride.findOne({ subgenreId });
+    // Handle podcast override (subgenreId as "podcast-SubgenreName")
+    if (showId?.startsWith("podcast-")) {
+      let override = await GenreShowOverride.findOne({ subgenreId: showId });
 
       if (!override) {
         override = new GenreShowOverride({
-          subgenreId,
+          subgenreId: showId,
           visible,
         });
       } else {
@@ -561,6 +564,7 @@ exports.toggleGenreShow = async (req, res) => {
         override,
       });
     } else {
+      // Handle admin-created show
       const genreShow = await GenreShow.findById(showId);
 
       if (!genreShow) {
@@ -582,6 +586,7 @@ exports.toggleGenreShow = async (req, res) => {
     });
   }
 };
+
 
 
 exports.deleteGenreShow = async (req, res) => {
