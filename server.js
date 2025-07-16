@@ -45,6 +45,8 @@ app.use('/api/app', newsRoutes);
 app.use("/api/radio-stations", radioStationsRoutes);
 app.use('/api/podcasts',podcastRoutes);
 // app.use('/api/podcast', podcastRoutes);
+app.use('/api/performers', require('./routes/performerRoutes'));
+app.use('/api/events', require('./routes/eventRoutes'));
 
 app.use('/api/app', appBannerRoutes);
 app.use('/api/site', siteBannerRoutes);
