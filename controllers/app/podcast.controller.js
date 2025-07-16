@@ -15,44 +15,39 @@ const cloudinary = require('../../utils/cloudinary');
 exports.addGenre = async (req, res) => {
   try {
     const { name } = req.body;
+
     if (!name) {
       return res.status(400).json({ message: 'Genre name is required.' });
     }
 
     // Case-insensitive check for existing genre
-    const existingGenre = await Genre.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    const existingGenre = await Genre.findOne({
+      name: { $regex: new RegExp(`^${name}$`, 'i') },
+    });
+
     if (existingGenre) {
-      // If a file was uploaded but the genre exists, we should not proceed.
-      // Multer stores the file temporarily, but it won't be saved to Cloudinary.
       return res.status(409).json({ message: 'Genre with this name already exists.' });
     }
 
     // Prepare the data for the new genre
     const genreData = { name };
 
-    // Check if an image file was uploaded
+    // Handle uploaded image via multer-storage-cloudinary
     if (req.file) {
-      // Upload the image to Cloudinary
-   if (req.file) {
-  genreData.image = {
-    url: req.file.path,      // Cloudinary URL
-    public_id: req.file.filename,  // Cloudinary public_id
-  };
-}
-
-
-      // Add the image URL and public_id to our genre data
       genreData.image = {
-        url: result.secure_url,
-        public_id: result.public_id,
+        url: req.file.path,        // Cloudinary URL from Multer-Cloudinary
+        public_id: req.file.filename,  // Cloudinary public_id
       };
     }
 
-    // Create the new genre with the name and optional image
-    const newGenre = new Genre(genreData);
-    await newGenre.save();
+    // Create the new genre
+    const newGenre = await Genre.create(genreData);
 
-    res.status(201).json({ message: 'Genre added successfully', genre: newGenre });
+    res.status(201).json({
+      message: 'Genre added successfully',
+      genre: newGenre,
+    });
+
   } catch (error) {
     console.error('Error adding genre:', error);
     res.status(500).json({ message: 'Error adding genre', error: error.message });
