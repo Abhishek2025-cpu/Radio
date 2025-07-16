@@ -6,6 +6,7 @@ const Podcast = require('../../models/mongo/podcast.model');
 const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../utils/cloudinary');
 const GenreShow = require("../../models/mongo/GenreShow");
+const GenreShowOverride = require("../../models/mongo/GenreShowOverride");
 
 /**
  * @desc    Create a new podcast category/show
@@ -532,24 +533,38 @@ exports.getAllGenreShows = async (req, res) => {
   }
 };
 
-exports.toggleGenreShowVisibility = async (req, res) => {
+exports.toggleShowStatus = async (req, res) => {
   try {
-    const { identifier } = req.params;
+    const { showId } = req.params;
+    const { status } = req.body;
 
-    const show = await GenreShow.findOne({
-      $or: [{ name: identifier }, { "image.public_id": identifier }],
-    });
+    let updatedShow;
 
-    if (!show) {
-      return res.status(404).json({ message: "Genre show not found." });
+    // First try finding in GenreShow
+    updatedShow = await GenreShow.findById(showId);
+    if (updatedShow) {
+      updatedShow.visible = status === "true";
+      await updatedShow.save();
+
+      return res.status(200).json({
+        message: "Admin show status updated successfully.",
+        show: updatedShow,
+      });
     }
 
-    show.visible = !show.visible;
-    await show.save();
+    // If not found in GenreShow, check Podcast override:
+    const override = await GenreShowOverride.findOneAndUpdate(
+      { subgenreId: showId },
+      { visible: status === "true" },
+      { new: true, upsert: true }
+    );
 
-    res.status(200).json({ message: `Visibility updated to ${show.visible}`, show });
+    return res.status(200).json({
+      message: "Podcast show status updated via override.",
+      override,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Error updating visibility.", error: error.message });
+    res.status(500).json({ message: "Error toggling show status", error: error.message });
   }
 };
 

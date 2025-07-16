@@ -26,7 +26,7 @@ getAdminGenres,
   //show Handlers
   addShowToGenre,
   getAllGenreShows,
-  toggleGenreShowVisibility,
+  toggleShowStatus,
   deleteGenreShow,
   updateGenreShow,
   getSubgenresByGenreNameAdmin
@@ -88,7 +88,7 @@ router.patch('/toggle-status/:id', togglePodcastStatus);
 //////////////////////////////////shows-routes///////////////////////////////////////////////////////////
 router.post("/:genreName/add", uploadStation.single("image"), addShowToGenre);
 router.get("/",getAllGenreShows);
-router.patch("/toggle/:identifier", toggleGenreShowVisibility);
+router.patch("/toggle/:identifier", toggleShowStatus);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
 
