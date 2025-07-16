@@ -139,17 +139,26 @@ exports.deleteGenre = async (req, res) => {
   }
 };
 
-exports.getAllGenresForAdmin = async (req, res) => {
+exports.getAdminGenres = async (req, res) => {
   try {
-    const genres = await Genre.find().sort({ createdAt: 'desc' });
+    // Fetch only from Genre collection — no merging from Podcast
+    const genres = await Genre.find().select('_id name image status').lean();
+
     res.status(200).json({
       count: genres.length,
-      genres: genres,
+      genres: genres.map(g => ({
+        _id: g._id,
+        name: g.name,
+        image: g.image || { url: null, public_id: null },
+        status: g.status || 'enabled',
+      })),
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching genres for admin', error: error.message });
+    console.error('Error fetching admin genres:', error);
+    res.status(500).json({ message: 'Error fetching admin genres', error: error.message });
   }
 };
+
 
 
 exports.getPublicGenres = async (req, res) => {
