@@ -55,6 +55,7 @@ app.use('/api/artists', artistRoutes);
 app.use('/api/websites', require('./routes/site/votingRoutes'));
 app.use('/api/google-ads', require('./routes/app/googleAdRoutes'));
 app.use('/api/contacts', require('./routes/app/contactRoutes'));
+app.use('/api/game-banners', require('./routes/app/gameBannerRoutes'));
 
 
 require('./services/scheduler'); 
