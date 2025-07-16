@@ -3,12 +3,181 @@
 // controllers/podcast.controller.js
 
 const Podcast = require('../../models/mongo/podcast.model');
+const Genre = require('../models/Genre');
+const cloudinary = require('../../utils/cloudinary');
 
 /**
  * @desc    Create a new podcast category/show
  * @route   POST /api/podcasts
  * @access  Private (Admin)
  */
+
+exports.addGenre = async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) {
+      return res.status(400).json({ message: 'Genre name is required.' });
+    }
+
+    // Case-insensitive check for existing genre
+    const existingGenre = await Genre.findOne({ name: { $regex: new RegExp(`^${name}$`, 'i') } });
+    if (existingGenre) {
+      // If a file was uploaded but the genre exists, we should not proceed.
+      // Multer stores the file temporarily, but it won't be saved to Cloudinary.
+      return res.status(409).json({ message: 'Genre with this name already exists.' });
+    }
+
+    // Prepare the data for the new genre
+    const genreData = { name };
+
+    // Check if an image file was uploaded
+    if (req.file) {
+      // Upload the image to Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'genres', // Organize uploads in a 'genres' folder in Cloudinary
+      });
+
+      // Add the image URL and public_id to our genre data
+      genreData.image = {
+        url: result.secure_url,
+        public_id: result.public_id,
+      };
+    }
+
+    // Create the new genre with the name and optional image
+    const newGenre = new Genre(genreData);
+    await newGenre.save();
+
+    res.status(201).json({ message: 'Genre added successfully', genre: newGenre });
+  } catch (error) {
+    console.error('Error adding genre:', error);
+    res.status(500).json({ message: 'Error adding genre', error: error.message });
+  }
+};
+
+
+
+exports.updateGenre = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name } = req.body;
+    const genre = await Genre.findById(id);
+
+    if (!genre) {
+      return res.status(404).json({ message: 'Genre not found.' });
+    }
+    
+    // Update name if provided
+    if (name) {
+      genre.name = name;
+    }
+
+    // Handle image update
+    if (req.file) {
+      // If there's an old image, delete it from Cloudinary
+      if (genre.image && genre.image.public_id) {
+        await cloudinary.uploader.destroy(genre.image.public_id);
+      }
+      
+      // Upload new image to Cloudinary
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'genres', // Optional: organize images in a folder
+      });
+
+      genre.image = {
+        url: result.secure_url,
+        public_id: result.public_id,
+      };
+    }
+
+    const updatedGenre = await genre.save();
+    res.status(200).json({ message: 'Genre updated successfully', genre: updatedGenre });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating genre', error: error.message });
+  }
+};
+
+// API 3: Toggle the status of a genre (enable/disable)
+exports.toggleGenreStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const genre = await Genre.findById(id);
+
+    if (!genre) {
+      return res.status(404).json({ message: 'Genre not found.' });
+    }
+
+    // Toggle status
+    genre.status = genre.status === 'enabled' ? 'disabled' : 'enabled';
+    await genre.save();
+
+    res.status(200).json({ message: `Genre status changed to ${genre.status}`, genre });
+  } catch (error) {
+    res.status(500).json({ message: 'Error toggling genre status', error: error.message });
+  }
+};
+
+// API 4: Delete a genre by ID
+exports.deleteGenre = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const genre = await Genre.findById(id);
+
+    if (!genre) {
+      return res.status(404).json({ message: 'Genre not found.' });
+    }
+
+    // If an image exists in Cloudinary, delete it first
+    if (genre.image && genre.image.public_id) {
+      await cloudinary.uploader.destroy(genre.image.public_id);
+    }
+
+    await Genre.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Genre deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting genre', error: error.message });
+  }
+};
+
+exports.getAllGenresForAdmin = async (req, res) => {
+  try {
+    const genres = await Genre.find().sort({ createdAt: 'desc' });
+    res.status(200).json({
+      count: genres.length,
+      genres: genres,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching genres for admin', error: error.message });
+  }
+};
+
+
+exports.getPublicGenres = async (req, res) => {
+  try {
+    const genres = await Genre.find({ status: 'enabled' }).select('name image.url');
+    res.status(200).json({
+      count: genres.length,
+      genres: genres,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching public genres', error: error.message });
+  }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 exports.createPodcast = async (req, res) => {
   try {
     // parent can be null (for top-level) or an ID of an existing category
@@ -69,18 +238,7 @@ exports.getAllPodcasts = async (req, res) => {
   }
 };
 
-exports.getAllPodcastsAdmin = async (req, res) => {
-  try {
-    const podcasts = await Podcast.find().lean();
 
-    res.status(200).json({
-      count: podcasts.length,
-      data: podcasts,
-    });
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching podcasts', error: error.message });
-  }
-};
 
 
 

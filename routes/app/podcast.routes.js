@@ -4,10 +4,18 @@ const express = require('express');
 const router = express.Router();
 // const { podcastUploader } = require('../../middlewares/cloudinaryUploader'); 
 
+
+const upload = require('../middleware/multer');
+
 const {
   createPodcast,
   getAllPodcasts,
   getPodcastByPath,
+  addGenre,
+  toggleGenreStatus,
+  deleteGenre,
+  getAllGenresForAdmin,
+  updateGenre,
 //   updatePodcast,
 getAllPodcastsAdmin,
   deletePodcast,
@@ -19,6 +27,15 @@ getAllPodcastsAdmin,
 // ===================================
 //  PUBLIC ROUTES (for fetching data)
 // ===================================
+
+router.post('/add-podcast', upload.single('image'), genreController.addGenre);
+router.put('/update-podcast/:id', upload.single('image'),updateGenre);
+router.patch('/toggle-status/:id', toggleGenreStatus);
+router.delete('/delete-podcast/:id', genreController.deleteGenre);
+router.get('/admin/all',getAllGenresForAdmin);
+
+
+
 
 // Get the entire podcast tree for navigation
 // Mapped to: GET /api/podcasts/all

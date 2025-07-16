@@ -1,20 +1,30 @@
 const mongoose = require('mongoose');
 
-const genreSchema = new mongoose.Schema({
+const GenreSchema = new mongoose.Schema(
+  {
     name: {
+      type: String,
+      required: [true, 'Genre name is required'],
+      unique: true, // Ensures genre names are unique
+      trim: true,
+    },
+    image: {
+      url: {
         type: String,
-        required: true,
-        unique: true // e.g., "U MORNING"
+        default: null, // URL from Cloudinary
+      },
+      public_id: {
+        type: String, // ID from Cloudinary to manage (delete/update) the image
+        default: null,
+      },
     },
-    description: {
-        type: String
+    status: {
+      type: String,
+      enum: ['enabled', 'disabled'], // Only two possible values
+      default: 'enabled',
     },
-    imageUrl: {
-        type: String, // URL to the genre's image
-        required: true
-    }
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.model('Genre', genreSchema);
-
-
+module.exports = mongoose.model('Genre', GenreSchema);
