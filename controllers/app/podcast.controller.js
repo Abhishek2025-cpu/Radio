@@ -298,6 +298,8 @@ exports.getUniqueGenres = async (req, res) => {
 
 
 
+
+
 exports.getSubgenresByGenreName = async (req, res) => {
   try {
     const { genreName } = req.params;
@@ -305,39 +307,49 @@ exports.getSubgenresByGenreName = async (req, res) => {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
-  const podcastSubgenres = await Podcast.find({
-  genre: genreName,
-  subgenre: { $exists: true, $ne: "" },
-}).select("subgenre").lean();
+    // Podcast subgenres
+    const podcastSubgenres = await Podcast.find({
+      genre: genreName,
+      subgenre: { $exists: true, $ne: "" },
+    })
+      .select("subgenre")
+      .lean();
 
-const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
+    const uniquePodcastNames = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
 
+    const podcastSubgenreObjects = uniquePodcastNames.map(name => ({
+      _id: new mongoose.Types.ObjectId(),
+      name,
+      image: { url: null, public_id: null },
+      status: "enabled",
+      source: "podcast",
+    }));
+
+    // Admin genre shows
     const genreShows = await GenreShow.find({
       genreName,
       visible: true,
-    }).select("_id name image visible").lean();
+    }).select("name image status").lean();
 
-    const combinedSubgenres = [
-      ...uniquePodcastSubgenres.map(sub => ({
-        _id: null,
-        name: sub,
-        image: { url: null, public_id: null },
-        status: "enabled",
-        source: "podcast",
-      })),
-      ...genreShows.map(show => ({
-        _id: show._id,
-        name: show.name,
-        image: show.image,
-        status: show.visible ? "enabled" : "disabled",
-        source: "admin",
-      })),
-    ];
+    const adminSubgenreObjects = genreShows.map(show => ({
+      _id: show._id,
+      name: show.name,
+      image: show.image,
+      status: show.status,
+      source: "admin",
+    }));
+
+    const combinedSubgenres = [...podcastSubgenreObjects, ...adminSubgenreObjects];
+
+    if (combinedSubgenres.length === 0) {
+      return res.status(404).json({ message: "No subgenres found for this genre." });
+    }
 
     res.status(200).json({
       count: combinedSubgenres.length,
       subgenres: combinedSubgenres,
     });
+
   } catch (error) {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
   }
@@ -348,51 +360,53 @@ const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.sub
 
 
 
-exports.getSubgenresByGenreNameForAdmin = async (req, res) => {
+
+exports.getSubgenresByGenreNameAdmin = async (req, res) => {
   try {
     const { genreName } = req.params;
     if (!genreName) {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
+    const podcastSubgenres = await Podcast.find({
+      genre: genreName,
+      subgenre: { $exists: true, $ne: "" },
+    }).select("subgenre").lean();
 
+    const uniquePodcastNames = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
 
-   const podcastSubgenres = await Podcast.find({
-  genre: genreName,
-  subgenre: { $exists: true, $ne: "" },
-}).select("subgenre").lean();
-
-const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
+    const podcastSubgenreObjects = uniquePodcastNames.map(name => ({
+      _id: new mongoose.Types.ObjectId(),
+      name,
+      image: { url: null, public_id: null },
+      status: "enabled",
+      source: "podcast",
+    }));
 
     const genreShows = await GenreShow.find({
       genreName,
-    }).select("_id name image visible").lean();
+    }).select("name image status visible").lean();
 
-    const combinedSubgenres = [
-      ...uniquePodcastSubgenres.map(sub => ({
-        _id: null,
-        name: sub,
-        image: { url: null, public_id: null },
-        status: "enabled",
-        source: "podcast",
-      })),
-      ...genreShows.map(show => ({
-        _id: show._id,
-        name: show.name,
-        image: show.image,
-        status: show.visible ? "enabled" : "disabled",
-        source: "admin",
-      })),
-    ];
+    const adminSubgenreObjects = genreShows.map(show => ({
+      _id: show._id,
+      name: show.name,
+      image: show.image,
+      status: show.status,
+      visible: show.visible,
+      source: "admin",
+    }));
+
+    const combinedSubgenres = [...podcastSubgenreObjects, ...adminSubgenreObjects];
 
     res.status(200).json({
       count: combinedSubgenres.length,
       subgenres: combinedSubgenres,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching subgenres for admin", error: error.message });
+    res.status(500).json({ message: "Error fetching subgenres (admin)", error: error.message });
   }
 };
+
 
 
 

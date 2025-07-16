@@ -29,7 +29,7 @@ getAdminGenres,
   toggleGenreShowVisibility,
   deleteGenreShow,
   updateGenreShow,
-  getSubgenresByGenreNameForAdmin
+  getSubgenresByGenreNameAdmin
 } = require('../../controllers/app/podcast.controller');
 
 // ===================================
@@ -69,7 +69,7 @@ router.get('/all', getAllPodcasts);
 
 // GET /api/podcasts/subgenre/:genreName
 router.get("/subgenre/:genreName", getSubgenresByGenreName);
-router.get("/admin/:genreName", getSubgenresByGenreNameForAdmin);
+router.get("/admin/:genreName", getSubgenresByGenreNameAdmin);
 
 // GET /api/podcasts/by-path
 
