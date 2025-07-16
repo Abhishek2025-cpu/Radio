@@ -266,40 +266,28 @@ exports.getUniqueGenres = async (req, res) => {
 
     const newGenresToInsert = [];
 
-    const mergedGenres = allGenreNames.map(name => {
+    allGenreNames.forEach(name => {
       const genreKey = name.toLowerCase();
-      const found = savedGenreMap.get(genreKey);
-
-      if (found) {
-        return {
-          _id: found._id,
-          name: found.name,
-          image: found.image || { url: null, public_id: null },
-          status: found.status || "enabled",
-        };
-      } else {
-        // Queue for insertion into DB
+      if (!savedGenreMap.has(genreKey)) {
         newGenresToInsert.push({ name, image: { url: null, public_id: null }, status: "enabled" });
-        return null; // Will be replaced after inserting
       }
-    }).filter(Boolean);
+    });
 
     if (newGenresToInsert.length > 0) {
-      const createdGenres = await Genre.insertMany(newGenresToInsert);
-
-      createdGenres.forEach(g => {
-        mergedGenres.push({
-          _id: g._id,
-          name: g.name,
-          image: g.image,
-          status: g.status,
-        });
-      });
+      await Genre.insertMany(newGenresToInsert);
     }
 
+    // ✅ Refetch everything fresh from DB so status changes are reflected
+    const updatedGenres = await Genre.find().select('_id name image status').lean();
+
     res.status(200).json({
-      count: mergedGenres.length,
-      genres: mergedGenres,
+      count: updatedGenres.length,
+      genres: updatedGenres.map(g => ({
+        _id: g._id,
+        name: g.name,
+        image: g.image || { url: null, public_id: null },
+        status: g.status || "enabled",
+      })),
     });
 
   } catch (error) {
