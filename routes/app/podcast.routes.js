@@ -135,7 +135,7 @@ router.get('/admin-all',getAdminGenres);
 router.get('/all', getAllPodcasts);
 
 // GET /api/podcasts/admin/all
-router.get('/admin/all', getAllGenresForAdmin);
+
 
 // GET /api/podcasts/subgenre/:genreName
 router.get("/subgenre/:genreName", getSubgenresByGenreName);
