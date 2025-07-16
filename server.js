@@ -56,6 +56,9 @@ app.use('/api/websites', require('./routes/site/votingRoutes'));
 app.use('/api/google-ads', require('./routes/app/googleAdRoutes'));
 app.use('/api/contacts', require('./routes/app/contactRoutes'));
 app.use('/api/game-banners', require('./routes/app/gameBannerRoutes'));
+app.use('/api/games', require('./routes/app/gameRoutes'));
+app.use('/api/participants', require('./routes/app/participantRoutes'));
+
 
 
 require('./services/scheduler'); 
