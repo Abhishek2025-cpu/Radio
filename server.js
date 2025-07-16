@@ -54,6 +54,8 @@ app.use('/api/form', require('./routes/app/FormSubmit'));
 app.use('/api/artists', artistRoutes);
 app.use('/api/websites', require('./routes/site/votingRoutes'));
 app.use('/api/google-ads', require('./routes/app/googleAdRoutes'));
+app.use('/api/contacts', require('./routes/app/contactRoutes'));
+
 
 require('./services/scheduler'); 
 
