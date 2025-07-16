@@ -437,3 +437,16 @@ exports.getPodcastByPath = async (req, res) => {
     res.status(500).json({ message: 'Error fetching podcast by path', error: error.message });
   }
 };
+
+// GET API for Public (shows only 'enabled' genres)
+exports.getPublicGenres = async (req, res) => {
+  try {
+    const genres = await Genre.find({ status: 'enabled' }).select('name image.url');
+    res.status(200).json({
+      count: genres.length,
+      genres: genres,
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching public genres', error: error.message });
+  }
+};
