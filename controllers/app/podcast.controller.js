@@ -305,43 +305,95 @@ exports.getSubgenresByGenreName = async (req, res) => {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
-    // Fetch subgenres from Podcast:
-    const podcastSubgenres = await Podcast.find({
-      genre: genreName,
-      subgenre: { $exists: true, $ne: "" },
-    }).select("subgenre").lean();
+  const podcastSubgenres = await Podcast.find({
+  genre: genreName,
+  subgenre: { $exists: true, $ne: "" },
+}).select("subgenre").lean();
 
-    const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
+const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
 
-    // Fetch shows from GenreShow where visible:
     const genreShows = await GenreShow.find({
       genreName,
       visible: true,
-    }).select("name image").lean();
+    }).select("_id name image visible").lean();
 
     const combinedSubgenres = [
-      ...uniquePodcastSubgenres.map(sub => ({ name: sub, source: "podcast" })),
+      ...uniquePodcastSubgenres.map(sub => ({
+        _id: null,
+        name: sub,
+        image: { url: null, public_id: null },
+        status: "enabled",
+        source: "podcast",
+      })),
       ...genreShows.map(show => ({
+        _id: show._id,
         name: show.name,
         image: show.image,
+        status: show.visible ? "enabled" : "disabled",
         source: "admin",
       })),
     ];
 
-    const uniqueCombined = Array.from(new Map(combinedSubgenres.map(item => [item.name, item])).values());
-
-    if (uniqueCombined.length === 0) {
-      return res.status(404).json({ message: "No subgenres found for this genre." });
-    }
-
     res.status(200).json({
-      count: uniqueCombined.length,
-      subgenres: uniqueCombined,
+      count: combinedSubgenres.length,
+      subgenres: combinedSubgenres,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
   }
 };
+
+
+
+
+
+
+exports.getSubgenresByGenreNameForAdmin = async (req, res) => {
+  try {
+    const { genreName } = req.params;
+    if (!genreName) {
+      return res.status(400).json({ message: "Genre name is required." });
+    }
+
+
+
+   const podcastSubgenres = await Podcast.find({
+  genre: genreName,
+  subgenre: { $exists: true, $ne: "" },
+}).select("subgenre").lean();
+
+const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
+
+    const genreShows = await GenreShow.find({
+      genreName,
+    }).select("_id name image visible").lean();
+
+    const combinedSubgenres = [
+      ...uniquePodcastSubgenres.map(sub => ({
+        _id: null,
+        name: sub,
+        image: { url: null, public_id: null },
+        status: "enabled",
+        source: "podcast",
+      })),
+      ...genreShows.map(show => ({
+        _id: show._id,
+        name: show.name,
+        image: show.image,
+        status: show.visible ? "enabled" : "disabled",
+        source: "admin",
+      })),
+    ];
+
+    res.status(200).json({
+      count: combinedSubgenres.length,
+      subgenres: combinedSubgenres,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching subgenres for admin", error: error.message });
+  }
+};
+
 
 
 
