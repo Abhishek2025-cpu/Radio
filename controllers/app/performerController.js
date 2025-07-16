@@ -63,3 +63,18 @@ exports.deletePerformer = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+exports.togglePerformer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const performer = await require('../models/Performer').findById(id);
+    if (!performer) return res.status(404).json({ message: "Performer not found" });
+
+    performer.isActive = !performer.isActive;
+    await performer.save();
+
+    res.json({ success: true, performer });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

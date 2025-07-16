@@ -7,5 +7,6 @@ router.get('/artist/events', performerCtrl.getPerformersWithEvents);
 router.get('/by-names', performerCtrl.getPerformerNames); // ✅ new route
 router.patch('/update/:id', uploadStation.single('image'), performerCtrl.updatePerformer);
 router.delete('/delete/:id', performerCtrl.deletePerformer);
+router.patch('/toggle/:id', performerCtrl.togglePerformer);
 
 module.exports = router;
