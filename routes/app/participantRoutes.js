@@ -6,3 +6,4 @@ router.post('/submit', uploadStation.single('media'), participantCtrl.submitPart
 router.get('/:gameId', participantCtrl.getParticipantsByGame);
 
 module.exports = router;
+
