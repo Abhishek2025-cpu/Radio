@@ -5,7 +5,7 @@ const router = express.Router();
 // const { podcastUploader } = require('../../middlewares/cloudinaryUploader'); 
 
 
-const upload = require('../middleware/multer');
+const upload = require('../../middlewares/upload');
 
 const {
   createPodcast,
@@ -28,7 +28,7 @@ getAllPodcastsAdmin,
 //  PUBLIC ROUTES (for fetching data)
 // ===================================
 
-router.post('/add-podcast', upload.single('image'), genreController.addGenre);
+router.post('/add-podcast', upload.single('image'),addGenre);
 router.put('/update-podcast/:id', upload.single('image'),updateGenre);
 router.patch('/toggle-status/:id', toggleGenreStatus);
 router.delete('/delete-podcast/:id', genreController.deleteGenre);
