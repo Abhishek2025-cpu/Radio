@@ -93,7 +93,7 @@ const {
   getPublicGenres, // Use this new one!
 getAdminGenres,
   // Podcast Handlers
-  createPodcast,
+  // createPodcast,
   getAllPodcasts,
   getPodcastByPath,
  getUniqueGenres,
@@ -144,7 +144,7 @@ router.get("/subgenre/:genreName", getSubgenresByGenreName);
 router.get('/by-path', getPodcastByPath);
 
 // POST /api/podcasts/create
-router.post('/create', upload.single('podcastImage'), createPodcast);
+// router.post('/create', upload.single('podcastImage'), createPodcast);
 
 // DELETE /api/podcasts/delete/:id
 router.delete('/delete/:id', deletePodcast);
