@@ -141,12 +141,24 @@ exports.deleteGenre = async (req, res) => {
 
 exports.getAllGenresForAdmin = async (req, res) => {
   try {
-    const genres = await Genre.find().sort({ createdAt: 'desc' });
+    // 1. Fetch all documents from the 'Genre' collection.
+    const genres = await Genre.find().sort({ createdAt: -1 }).lean();
+
+    // 2. Map the results to a clean and predictable format.
+    const formattedGenres = genres.map(genre => ({
+      _id: genre._id,
+      name: genre.name,
+      image: genre.image ? genre.image.url : "", // Safely access the image URL, provide "" as fallback.
+      status: genre.status,
+    }));
+
+    // 3. Send the formatted array of objects.
     res.status(200).json({
-      count: genres.length,
-      genres: genres,
+      count: formattedGenres.length,
+      genres: formattedGenres,
     });
   } catch (error) {
+    console.error('Error fetching genres for admin:', error);
     res.status(500).json({ message: 'Error fetching genres for admin', error: error.message });
   }
 };
@@ -154,12 +166,26 @@ exports.getAllGenresForAdmin = async (req, res) => {
 
 exports.getPublicGenres = async (req, res) => {
   try {
-    const genres = await Genre.find({ status: 'enabled' }).select('name image.url');
+    // 1. Fetch only documents where status is 'enabled'.
+    const genres = await Genre.find({ status: 'enabled' })
+      .sort({ name: 1 }) // Sort alphabetically by name for a good user experience
+      .lean();
+
+    // 2. Map the results to a clean public-facing format.
+    // We don't need to expose the 'status' to the public.
+    const formattedGenres = genres.map(genre => ({
+      _id: genre._id,
+      name: genre.name,
+      image: genre.image ? genre.image.url : "",
+    }));
+
+    // 3. Send the response.
     res.status(200).json({
-      count: genres.length,
-      genres: genres,
+      count: formattedGenres.length,
+      genres: formattedGenres,
     });
   } catch (error) {
+    console.error('Error fetching public genres:', error);
     res.status(500).json({ message: 'Error fetching public genres', error: error.message });
   }
 };
