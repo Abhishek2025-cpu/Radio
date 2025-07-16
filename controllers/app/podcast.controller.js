@@ -535,21 +535,21 @@ exports.getAllGenreShows = async (req, res) => {
 
 exports.toggleGenreShow = async (req, res) => {
   try {
-    const showId = req.params.showId?.trim();
+    const { identifier } = req.params;
     const { status } = req.body;
 
-    if (!showId) {
+    if (!identifier) {
       return res.status(400).json({ message: "Show ID is required." });
     }
 
     const visible = status === "true";
 
-    if (showId.startsWith("podcast-")) {
-      let override = await GenreShowOverride.findOne({ subgenreId: showId });
+    if (identifier.startsWith("podcast-")) {
+      let override = await GenreShowOverride.findOne({ subgenreId: identifier });
 
       if (!override) {
         override = new GenreShowOverride({
-          subgenreId: showId,
+          subgenreId: identifier,
           visible,
         });
       } else {
@@ -563,7 +563,7 @@ exports.toggleGenreShow = async (req, res) => {
         override,
       });
     } else {
-      const genreShow = await GenreShow.findById(showId);
+      const genreShow = await GenreShow.findById(identifier);
 
       if (!genreShow) {
         return res.status(404).json({ message: "Genre show not found." });
