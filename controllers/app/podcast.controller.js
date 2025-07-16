@@ -252,32 +252,29 @@ exports.getAllPodcasts = async (req, res) => {
 
 exports.getUniqueGenres = async (req, res) => {
   try {
+    // Fetch podcast genres
     const podcasts = await Podcast.find().select('genre').lean();
     const podcastGenres = podcasts.map(p => p.genre).filter(Boolean);
 
+    // Fetch saved genres
     const savedGenres = await Genre.find().select('_id name image status').lean();
-    const savedGenreMap = new Map();
-
-    savedGenres.forEach(g => {
-      savedGenreMap.set(g.name.toLowerCase(), g);
-    });
-
-    const allGenreNames = [...new Set([...podcastGenres, ...savedGenres.map(g => g.name)])];
+    const savedGenreMap = new Map(savedGenres.map(g => [g.name.toLowerCase(), g]));
 
     const newGenresToInsert = [];
 
-    allGenreNames.forEach(name => {
+    podcastGenres.forEach(name => {
       const genreKey = name.toLowerCase();
       if (!savedGenreMap.has(genreKey)) {
         newGenresToInsert.push({ name, image: { url: null, public_id: null }, status: "enabled" });
       }
     });
 
+    // Insert new genres if any
     if (newGenresToInsert.length > 0) {
       await Genre.insertMany(newGenresToInsert);
     }
 
-    // ✅ Refetch everything fresh from DB so status changes are reflected
+    // ✅ Always fetch fresh genres after insert or not
     const updatedGenres = await Genre.find().select('_id name image status').lean();
 
     res.status(200).json({
@@ -289,12 +286,12 @@ exports.getUniqueGenres = async (req, res) => {
         status: g.status || "enabled",
       })),
     });
-
   } catch (error) {
     console.error('Error fetching unique genres:', error);
     res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
   }
 };
+
 
 
 
