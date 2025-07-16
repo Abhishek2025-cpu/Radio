@@ -17,10 +17,12 @@
 // module.exports = upload;
 
 // utils/multer.js
+
+
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { cloudinary } = require('../utils/cloudinary');
 const path = require('path');
-const cloudinary = require('../utils/cloudinary'); // Single source of truth
 
 const stationStorage = new CloudinaryStorage({
   cloudinary,

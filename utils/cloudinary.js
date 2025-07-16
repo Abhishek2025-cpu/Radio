@@ -72,7 +72,7 @@ cloudinary.config({
 
 const uploadToCloudinary = (file, mimetype, usePath = false) => {
   return new Promise((resolve, reject) => {
-    let folder = 'news_media/misc'; // Default folder
+    let folder = 'news_media/misc';
     if (mimetype.startsWith('image/')) {
       folder = 'news_media/images';
     } else if (mimetype.startsWith('audio/')) {
@@ -83,16 +83,12 @@ const uploadToCloudinary = (file, mimetype, usePath = false) => {
 
     const options = {
       folder,
-      resource_type: 'auto', // Let Cloudinary auto-detect resource type
+      resource_type: 'auto',
     };
 
     const callback = (error, result) => {
       if (error) {
-        // Log the detailed, original error for debugging on the server
         console.error('Cloudinary Upload Error:', error);
-
-        // **THE FIX**: Reject with a NEW, standard Error object.
-        // This ensures a proper error message and stack trace are passed to the .catch() block.
         reject(new Error('Failed to upload file to Cloudinary.'));
       } else {
         resolve(result);
@@ -100,14 +96,15 @@ const uploadToCloudinary = (file, mimetype, usePath = false) => {
     };
 
     if (usePath) {
-      // Upload using file path
       cloudinary.uploader.upload(file, options, callback);
     } else {
-      // Upload using buffer stream
       const uploadStream = cloudinary.uploader.upload_stream(options, callback);
       streamifier.createReadStream(file).pipe(uploadStream);
     }
   });
 };
 
-module.exports = { cloudinary, uploadToCloudinary };
+module.exports = {
+  cloudinary,            // for CloudinaryStorage or direct use
+  uploadToCloudinary,    // optional custom function
+};
