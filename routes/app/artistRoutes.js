@@ -1,5 +1,5 @@
 const express = require('express');
-const upload = require('../../middlewares/upload');
+const { uploadStation } = require('../../middlewares/upload');
 const router = express.Router();
 
 const artistController = require('../../controllers/app/artistController');
@@ -7,7 +7,7 @@ const artistController = require('../../controllers/app/artistController');
 // CRUD
 router.post(
   '/add-artist',
-  upload.fields([
+  uploadStation.fields([
     { name: 'profileImage', maxCount: 1 },
     { name: 'media', maxCount: 1 },
   ]),
@@ -16,7 +16,7 @@ router.post(
 
 router.patch(
   '/update-artist/:id',
-upload.fields([
+uploadStation.fields([
   { name: 'profileImage', maxCount: 1 },
   { name: 'songName', maxCount: 1 } // ✅ must be exactly 'songName'
 ]),

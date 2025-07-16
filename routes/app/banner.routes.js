@@ -4,15 +4,15 @@ const {adminGetBanners, createBanner, getBanners,updateBanner,toggleBannerActive
 const multer = require('multer');
 
 
-const storage = multer.diskStorage({
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
+// const storage = multer.diskStorage({
+//   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+// });
 
-const upload = multer({ storage });
+const { uploadStation } = require('../../middlewares/upload');
 
 router.post(
   '/add-banner',
-  upload.fields([
+  uploadStation.fields([
     { name: 'images', maxCount: 5 },
     { name: 'video', maxCount: 1 }
   ]),

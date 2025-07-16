@@ -80,7 +80,7 @@
 
 const express = require('express');
 const router = express.Router();
-const upload = require('../../middlewares/upload');
+const { uploadStation } = require('../../middlewares/upload');
 
 // Import ALL necessary handlers from the single controller file
 const {
@@ -107,10 +107,10 @@ const {
 // ===================================
 
 // POST /api/podcasts/genres/add
-router.post('/genres/add', upload.single('image'), addGenre);
+router.post('/genres/add', uploadStation.single('image'), addGenre);
 
 // PUT /api/podcasts/genres/update/:id
-router.put('/genres/update/:id', upload.single('image'), updateGenre);
+router.put('/genres/update/:id', uploadStation.single('image'), updateGenre);
 
 // PATCH /api/podcasts/genres/toggle-status/:id
 router.patch('/genres/toggle-status/:id', toggleGenreStatus);
@@ -143,7 +143,7 @@ router.get("/subgenre/:genreName", getSubgenresByGenreName);
 router.get('/by-path', getPodcastByPath);
 
 // POST /api/podcasts/create
-router.post('/create', upload.single('podcastImage'), createPodcast);
+router.post('/create', uploadStation.single('podcastImage'), createPodcast);
 
 // DELETE /api/podcasts/delete/:id
 router.delete('/delete/:id', deletePodcast);
