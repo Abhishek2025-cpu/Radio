@@ -247,13 +247,15 @@ exports.getUniqueGenres = async (req, res) => {
     const podcastGenres = podcasts.map(p => p.genre).filter(Boolean);
 
     const savedGenres = await Genre.find().select('_id name image status').lean();
-
     const savedGenreMap = new Map();
+
     savedGenres.forEach(g => {
       savedGenreMap.set(g.name.toLowerCase(), g);
     });
 
     const allGenreNames = [...new Set([...podcastGenres, ...savedGenres.map(g => g.name)])];
+
+    const newGenresToInsert = [];
 
     const mergedGenres = allGenreNames.map(name => {
       const genreKey = name.toLowerCase();
@@ -263,28 +265,40 @@ exports.getUniqueGenres = async (req, res) => {
         return {
           _id: found._id,
           name: found.name,
-          image: found.image || null,
-          status: found.status || "disabled", // Controlled by patch API
+          image: found.image || { url: null, public_id: null },
+          status: found.status || "enabled",
         };
       } else {
-        return {
-          _id: null,
-          name,
-          image: null,
-          status: "disabled", // Default for non-registered genres
-        };
+        // Queue for insertion into DB
+        newGenresToInsert.push({ name, image: { url: null, public_id: null }, status: "enabled" });
+        return null; // Will be replaced after inserting
       }
-    });
+    }).filter(Boolean);
+
+    if (newGenresToInsert.length > 0) {
+      const createdGenres = await Genre.insertMany(newGenresToInsert);
+
+      createdGenres.forEach(g => {
+        mergedGenres.push({
+          _id: g._id,
+          name: g.name,
+          image: g.image,
+          status: g.status,
+        });
+      });
+    }
 
     res.status(200).json({
       count: mergedGenres.length,
       genres: mergedGenres,
     });
+
   } catch (error) {
     console.error('Error fetching unique genres:', error);
     res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
   }
 };
+
 
 
 
