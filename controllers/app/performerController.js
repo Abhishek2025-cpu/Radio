@@ -67,7 +67,7 @@ exports.deletePerformer = async (req, res) => {
 exports.togglePerformer = async (req, res) => {
   try {
     const { id } = req.params;
-    const performer = await require('../models/Performer').findById(id);
+    const performer = await require('../../models/mongo/Performer').findById(id);
     if (!performer) return res.status(404).json({ message: "Performer not found" });
 
     performer.isActive = !performer.isActive;
