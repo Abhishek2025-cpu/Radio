@@ -53,6 +53,8 @@ app.use('/api/site', siteBannerRoutes);
 app.use('/api/form', require('./routes/app/FormSubmit'));
 app.use('/api/artists', artistRoutes);
 app.use('/api/websites', require('./routes/site/votingRoutes'));
+app.use('/api/google-ads', require('./routes/app/googleAdRoutes'));
+
 require('./services/scheduler'); 
 
 
