@@ -31,7 +31,7 @@ getAllPodcastsAdmin,
 router.post('/add-podcast', upload.single('image'),addGenre);
 router.put('/update-podcast/:id', upload.single('image'),updateGenre);
 router.patch('/toggle-status/:id', toggleGenreStatus);
-router.delete('/delete-podcast/:id', genreController.deleteGenre);
+router.delete('/delete-podcast/:id', deleteGenre);
 router.get('/admin/all',getAllGenresForAdmin);
 
 
