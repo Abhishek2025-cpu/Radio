@@ -96,7 +96,7 @@ const {
   createPodcast,
   getAllPodcasts,
   getPodcastByPath,
-
+ getUniqueGenres,
   deletePodcast,
   getSubgenresByGenreName,
   togglePodcastStatus
@@ -123,6 +123,8 @@ router.get('/genres/admin/all', getAllGenresForAdmin);
 
 // GET /api/podcasts/genres/public   <-- THIS FIXES THE ERROR
 router.get('/genres/public', getPublicGenres);
+router.get('/unique-genres',getUniqueGenres);
+
 
 // ===================================
 //  PODCAST ROUTES
