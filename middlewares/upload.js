@@ -20,10 +20,8 @@
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const path = require('path');
-const cloudinary = require('../utils/cloudinary'); // Your existing configured Cloudinary instance
-const cloudinaryConfig = require('../config/cloudinary'); // If needed for the second config
+const cloudinary = require('../utils/cloudinary'); // Single source of truth
 
-// Default storage: stations folder
 const stationStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -32,32 +30,24 @@ const stationStorage = new CloudinaryStorage({
   },
 });
 
-// Genre storage: genres folder with file filter
 const genreStorage = new CloudinaryStorage({
-  cloudinary: cloudinaryConfig, // Explicit config if needed
+  cloudinary,
   params: {
     folder: 'genres',
     allowed_formats: ['jpg', 'jpeg', 'png'],
   },
 });
 
-// File filter logic (optional but reusable)
 const fileFilter = (req, file, cb) => {
   const allowedTypes = /jpeg|jpg|png/;
   const mimetype = allowedTypes.test(file.mimetype);
   const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-
-  if (mimetype && extname) {
-    return cb(null, true);
-  }
-  cb(new Error('Error: File upload only supports jpeg, jpg, png.'));
+  if (mimetype && extname) return cb(null, true);
+  cb(new Error('Only jpeg, jpg, png files allowed.'));
 };
 
-// Export both upload middlewares separately
-const uploadStation = multer({ storage: stationStorage });
+const uploadStation = multer({ storage: stationStorage, fileFilter });
 const uploadGenre = multer({ storage: genreStorage, fileFilter });
 
-module.exports = {
-  uploadStation,
-  uploadGenre,
-};
+module.exports = { uploadStation, uploadGenre };
+

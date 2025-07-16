@@ -33,9 +33,13 @@ exports.addGenre = async (req, res) => {
     // Check if an image file was uploaded
     if (req.file) {
       // Upload the image to Cloudinary
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'genres', // Organize uploads in a 'genres' folder in Cloudinary
-      });
+   if (req.file) {
+  genreData.image = {
+    url: req.file.path,      // Cloudinary URL
+    public_id: req.file.filename,  // Cloudinary public_id
+  };
+}
+
 
       // Add the image URL and public_id to our genre data
       genreData.image = {
