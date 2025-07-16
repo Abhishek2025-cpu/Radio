@@ -88,7 +88,7 @@ router.patch('/toggle-status/:id', togglePodcastStatus);
 //////////////////////////////////shows-routes///////////////////////////////////////////////////////////
 router.post("/:genreName/add", uploadStation.single("image"), addShowToGenre);
 router.get("/",getAllGenreShows);
-router.put("/show/toggle/:identifier", toggleGenreShow);
+router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
 
