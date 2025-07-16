@@ -5,6 +5,7 @@
 const Podcast = require('../../models/mongo/podcast.model');
 const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../utils/cloudinary');
+const GenreShow = require("../../models/mongo/GenreShow");
 
 /**
  * @desc    Create a new podcast category/show
@@ -295,30 +296,48 @@ exports.getUniqueGenres = async (req, res) => {
 
 
 
-
-
+const GenreShow = require("../models/GenreShow");
+const Podcast = require("../models/Podcast");
 
 exports.getSubgenresByGenreName = async (req, res) => {
   try {
     const { genreName } = req.params;
-
     if (!genreName) {
       return res.status(400).json({ message: "Genre name is required." });
     }
 
-    const subgenres = await Podcast.find({ genre: genreName, subgenre: { $exists: true, $ne: "" } })
-      .select("subgenre")
-      .lean();
+    // Fetch subgenres from Podcast:
+    const podcastSubgenres = await Podcast.find({
+      genre: genreName,
+      subgenre: { $exists: true, $ne: "" },
+    }).select("subgenre").lean();
 
-    const uniqueSubgenres = [...new Set(subgenres.map(item => item.subgenre).filter(Boolean))];
+    const uniquePodcastSubgenres = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
 
-    if (uniqueSubgenres.length === 0) {
+    // Fetch shows from GenreShow where visible:
+    const genreShows = await GenreShow.find({
+      genreName,
+      visible: true,
+    }).select("name image").lean();
+
+    const combinedSubgenres = [
+      ...uniquePodcastSubgenres.map(sub => ({ name: sub, source: "podcast" })),
+      ...genreShows.map(show => ({
+        name: show.name,
+        image: show.image,
+        source: "admin",
+      })),
+    ];
+
+    const uniqueCombined = Array.from(new Map(combinedSubgenres.map(item => [item.name, item])).values());
+
+    if (uniqueCombined.length === 0) {
       return res.status(404).json({ message: "No subgenres found for this genre." });
     }
 
     res.status(200).json({
-      count: uniqueSubgenres.length,
-      subgenres: uniqueSubgenres,
+      count: uniqueCombined.length,
+      subgenres: uniqueCombined,
     });
   } catch (error) {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
@@ -327,48 +346,8 @@ exports.getSubgenresByGenreName = async (req, res) => {
 
 
 
-/**
- * @desc    Update a podcast
- * @route   PUT /api/podcasts/:id
- * @access  Private (Admin)
- */
-// exports.updatePodcast = async (req, res) => {
-//   try {
-//     const { id } = req.params;
 
-//     // Find the podcast item to update
-//     const podcast = await Podcast.findById(id);
-//     if (!podcast) {
-//       return res.status(404).json({ message: 'Podcast item not found' });
-//     }
 
-//     // Get text data from the request body
-//     const { name, parent } = req.body;
-
-//     // Update text fields if they were provided in the form-data
-//     if (name) podcast.name = name;
-//     if (parent) podcast.parent = parent; // Allows moving an item to a different parent
-
-//     // Handle the image upload
-//     // If a new image file was sent, our middleware provides its Cloudinary URL
-//     if (req.file) {
-//       podcast.image = req.file.path;
-//     }
-
-//     const updatedPodcast = await podcast.save();
-//     res.status(200).json(updatedPodcast);
-
-//   } catch (error) {
-//     console.error('Error updating podcast:', error);
-//     res.status(500).json({ message: 'Error updating podcast', error: error.message });
-//   }
-// };
-
-/**
- * @desc    Toggle a podcast's active status (on/off)
- * @route   PATCH /api/podcasts/:id/status
- * @access  Private (Admin)
- */
 exports.togglePodcastStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -420,61 +399,7 @@ exports.deletePodcast = async (req, res) => {
   }
 };
 
-/**
- * @desc    Get a specific podcast and its children by its full URL path
- * @route   GET /api/podcasts/by-path/*
- * @access  Public
- */
-exports.getPodcastByPath = async (req, res) => {
-  try {
-    // req.params[0] captures everything after '/by-path/'
-    const fullPath = req.params[0];
 
-    if (!fullPath) {
-      return res.status(400).json({ message: 'Path is required.' });
-    }
-
-    // Decode URI components like '%20' and split into segments
-    const pathSegments = decodeURIComponent(fullPath).split('/').filter(Boolean);
-    const slugSegments = pathSegments.map(segment => slugify(segment, { lower: true, strict: true }));
-
-    let parentId = null;
-    let targetPodcast = null;
-
-    // Sequentially traverse the path to find the target podcast
-    for (const slug of slugSegments) {
-      const currentPodcast = await Podcast.findOne({ slug: slug, parent: parentId }).lean();
-
-      if (!currentPodcast) {
-        return res.status(404).json({ message: `Path not found at segment: '${slug}'` });
-      }
-
-      parentId = currentPodcast._id;
-      targetPodcast = currentPodcast;
-    }
-    
-    if (!targetPodcast) {
-         // This case handles an empty path request, e.g., /api/podcasts/by-path/
-         // Let's return all top-level podcasts
-         const topLevelPodcasts = await Podcast.find({ parent: null }).lean();
-         return res.status(200).json({
-             podcast: { name: "Root", slug: "" },
-             children: topLevelPodcasts
-         });
-    }
-
-    // Now, find all direct children of the target podcast
-    const children = await Podcast.find({ parent: targetPodcast._id }).lean();
-
-    res.status(200).json({
-      podcast: targetPodcast,
-      children: children,
-    });
-
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching podcast by path', error: error.message });
-  }
-};
 
 // GET API for Public (shows only 'enabled' genres)
 exports.getPublicGenres = async (req, res) => {
@@ -486,5 +411,130 @@ exports.getPublicGenres = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching public genres', error: error.message });
+  }
+};
+
+
+
+///////////////////////////////////////////////////shows-section//////////////////////////////////////////////////////
+
+
+exports.addShowToGenre = async (req, res) => {
+  try {
+    const { genreName } = req.params;
+    const { name, visible } = req.body;
+
+    if (!genreName || !name) {
+      return res.status(400).json({ message: "Genre name and show name are required." });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Image file is required." });
+    }
+
+    const image = {
+      url: req.file.path,
+      public_id: req.file.filename,
+    };
+
+    const newShow = await GenreShow.create({
+      genreName,
+      name,
+      image,
+      visible: visible !== undefined ? visible === 'true' : true,
+    });
+
+    res.status(201).json({ message: "Show added successfully.", show: newShow });
+  } catch (error) {
+    res.status(500).json({ message: "Error adding show.", error: error.message });
+  }
+};
+
+
+exports.getAllGenreShows = async (req, res) => {
+  try {
+    const { visible } = req.query;
+
+    const filter = {};
+    if (visible !== undefined) {
+      filter.visible = visible === "true";
+    }
+
+    const shows = await GenreShow.find(filter).lean();
+    res.status(200).json({ count: shows.length, shows });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching genre shows.", error: error.message });
+  }
+};
+
+exports.toggleGenreShowVisibility = async (req, res) => {
+  try {
+    const { identifier } = req.params;
+
+    const show = await GenreShow.findOne({
+      $or: [{ name: identifier }, { "image.public_id": identifier }],
+    });
+
+    if (!show) {
+      return res.status(404).json({ message: "Genre show not found." });
+    }
+
+    show.visible = !show.visible;
+    await show.save();
+
+    res.status(200).json({ message: `Visibility updated to ${show.visible}`, show });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating visibility.", error: error.message });
+  }
+};
+
+exports.deleteGenreShow = async (req, res) => {
+  try {
+    const { identifier } = req.params;
+
+    const deleted = await GenreShow.findOneAndDelete({
+      $or: [{ name: identifier }, { "image.public_id": identifier }],
+    });
+
+    if (!deleted) {
+      return res.status(404).json({ message: "Genre show not found." });
+    }
+
+    res.status(200).json({ message: "Genre show deleted successfully.", deleted });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting genre show.", error: error.message });
+  }
+};
+
+exports.updateGenreShow = async (req, res) => {
+  try {
+    const { genreName, showId } = req.params;
+    const { name } = req.body;
+
+    const genreShow = await GenreShow.findOne({ _id: showId, genreName });
+    if (!genreShow) {
+      return res.status(404).json({ message: "Genre show not found." });
+    }
+
+    if (name) genreShow.name = name;
+
+    // If a new image is uploaded:
+    if (req.file) {
+      // Delete old image from Cloudinary:
+      if (genreShow.image?.public_id) {
+        await cloudinary.uploader.destroy(genreShow.image.public_id);
+      }
+
+      genreShow.image = {
+        url: req.file.path,
+        public_id: req.file.filename,
+      };
+    }
+
+    await genreShow.save();
+
+    res.status(200).json({ message: "Genre show updated successfully.", genreShow });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating genre show.", error: error.message });
   }
 };
