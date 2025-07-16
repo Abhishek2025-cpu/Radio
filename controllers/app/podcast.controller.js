@@ -243,12 +243,10 @@ exports.getAllPodcasts = async (req, res) => {
 
 exports.getUniqueGenres = async (req, res) => {
   try {
-    // Fetch genres from Podcast collection
     const podcasts = await Podcast.find().select('genre').lean();
     const podcastGenres = podcasts.map(p => p.genre).filter(Boolean);
 
-    // Fetch all saved genres from Genre collection
-    const savedGenres = await Genre.find().select('_id name image').lean();
+    const savedGenres = await Genre.find().select('_id name image status').lean();
 
     const savedGenreMap = new Map();
     savedGenres.forEach(g => {
@@ -258,11 +256,23 @@ exports.getUniqueGenres = async (req, res) => {
     const allGenreNames = [...new Set([...podcastGenres, ...savedGenres.map(g => g.name)])];
 
     const mergedGenres = allGenreNames.map(name => {
-      const found = savedGenreMap.get(name.toLowerCase());
+      const genreKey = name.toLowerCase();
+      const found = savedGenreMap.get(genreKey);
+
       if (found) {
-        return found;
+        return {
+          _id: found._id,
+          name: found.name,
+          image: found.image || null,
+          status: found.status || "disabled", // Controlled by patch API
+        };
       } else {
-        return { name }; // Podcast-only genre, no _id or image.
+        return {
+          _id: null,
+          name,
+          image: null,
+          status: "disabled", // Default for non-registered genres
+        };
       }
     });
 
@@ -275,6 +285,7 @@ exports.getUniqueGenres = async (req, res) => {
     res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
   }
 };
+
 
 
 
