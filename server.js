@@ -58,6 +58,8 @@ app.use('/api/contacts', require('./routes/app/contactRoutes'));
 app.use('/api/game-banners', require('./routes/app/gameBannerRoutes'));
 app.use('/api/games', require('./routes/app/gameRoutes'));
 app.use('/api/participants', require('./routes/app/participantRoutes'));
+app.use('/api/playbacks', require('./routes/app/playbackRoutes'));
+
 
 
 
