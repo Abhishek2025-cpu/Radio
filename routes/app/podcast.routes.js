@@ -96,7 +96,7 @@ const {
   createPodcast,
   getAllPodcasts,
   getPodcastByPath,
-  getAllPodcastsAdmin,
+  getAllGenresForAdmin,
   deletePodcast,
   getSubgenresByGenreName,
   togglePodcastStatus
@@ -132,7 +132,7 @@ router.get('/genres/public', getPublicGenres);
 router.get('/all', getAllPodcasts);
 
 // GET /api/podcasts/admin/all
-router.get('/admin/all', getAllPodcastsAdmin);
+router.get('/admin/all', getAllGenresForAdmin);
 
 // GET /api/podcasts/subgenre/:genreName
 router.get("/subgenre/:genreName", getSubgenresByGenreName);
