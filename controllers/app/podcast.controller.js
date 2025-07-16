@@ -141,24 +141,12 @@ exports.deleteGenre = async (req, res) => {
 
 exports.getAllGenresForAdmin = async (req, res) => {
   try {
-    // 1. Fetch all documents from the 'Genre' collection.
-    const genres = await Genre.find().sort({ createdAt: -1 }).lean();
-
-    // 2. Map the results to a clean and predictable format.
-    const formattedGenres = genres.map(genre => ({
-      _id: genre._id,
-      name: genre.name,
-      image: genre.image ? genre.image.url : "", // Safely access the image URL, provide "" as fallback.
-      status: genre.status,
-    }));
-
-    // 3. Send the formatted array of objects.
+    const genres = await Genre.find().sort({ createdAt: 'desc' });
     res.status(200).json({
-      count: formattedGenres.length,
-      genres: formattedGenres,
+      count: genres.length,
+      genres: genres,
     });
   } catch (error) {
-    console.error('Error fetching genres for admin:', error);
     res.status(500).json({ message: 'Error fetching genres for admin', error: error.message });
   }
 };
@@ -166,26 +154,12 @@ exports.getAllGenresForAdmin = async (req, res) => {
 
 exports.getPublicGenres = async (req, res) => {
   try {
-    // 1. Fetch only documents where status is 'enabled'.
-    const genres = await Genre.find({ status: 'enabled' })
-      .sort({ name: 1 }) // Sort alphabetically by name for a good user experience
-      .lean();
-
-    // 2. Map the results to a clean public-facing format.
-    // We don't need to expose the 'status' to the public.
-    const formattedGenres = genres.map(genre => ({
-      _id: genre._id,
-      name: genre.name,
-      image: genre.image ? genre.image.url : "",
-    }));
-
-    // 3. Send the response.
+    const genres = await Genre.find({ status: 'enabled' }).select('name image.url');
     res.status(200).json({
-      count: formattedGenres.length,
-      genres: formattedGenres,
+      count: genres.length,
+      genres: genres,
     });
   } catch (error) {
-    console.error('Error fetching public genres:', error);
     res.status(500).json({ message: 'Error fetching public genres', error: error.message });
   }
 };
@@ -274,21 +248,34 @@ exports.getUniqueGenres = async (req, res) => {
     const podcastGenres = podcasts.map(p => p.genre).filter(Boolean);
 
     // Fetch all saved genres from Genre collection
-    const savedGenres = await Genre.find().select('name').lean();
-    const savedGenreNames = savedGenres.map(g => g.name);
+    const savedGenres = await Genre.find().select('_id name image').lean();
 
-    // Merge and deduplicate
-    const allGenres = [...new Set([...podcastGenres, ...savedGenreNames])];
+    const savedGenreMap = new Map();
+    savedGenres.forEach(g => {
+      savedGenreMap.set(g.name.toLowerCase(), g);
+    });
+
+    const allGenreNames = [...new Set([...podcastGenres, ...savedGenres.map(g => g.name)])];
+
+    const mergedGenres = allGenreNames.map(name => {
+      const found = savedGenreMap.get(name.toLowerCase());
+      if (found) {
+        return found;
+      } else {
+        return { name }; // Podcast-only genre, no _id or image.
+      }
+    });
 
     res.status(200).json({
-      count: allGenres.length,
-      genres: allGenres,
+      count: mergedGenres.length,
+      genres: mergedGenres,
     });
   } catch (error) {
     console.error('Error fetching unique genres:', error);
     res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
   }
 };
+
 
 
 
