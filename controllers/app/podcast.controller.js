@@ -3,7 +3,7 @@
 // controllers/podcast.controller.js
 
 const Podcast = require('../../models/mongo/podcast.model');
-const Genre = require('../models/Genre');
+const Genre = require('../../models/mongo/Genre');
 const cloudinary = require('../../utils/cloudinary');
 
 /**
