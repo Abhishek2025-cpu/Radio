@@ -243,20 +243,27 @@ exports.getAllPodcasts = async (req, res) => {
 
 exports.getUniqueGenres = async (req, res) => {
   try {
+    // Fetch genres from Podcast collection
     const podcasts = await Podcast.find().select('genre').lean();
+    const podcastGenres = podcasts.map(p => p.genre).filter(Boolean);
 
-    // Extract unique genres using Set
-    const uniqueGenres = [...new Set(podcasts.map(p => p.genre).filter(Boolean))];
+    // Fetch all saved genres from Genre collection
+    const savedGenres = await Genre.find().select('name').lean();
+    const savedGenreNames = savedGenres.map(g => g.name);
+
+    // Merge and deduplicate
+    const allGenres = [...new Set([...podcastGenres, ...savedGenreNames])];
 
     res.status(200).json({
-      count: uniqueGenres.length,
-      genres: uniqueGenres,
+      count: allGenres.length,
+      genres: allGenres,
     });
   } catch (error) {
     console.error('Error fetching unique genres:', error);
     res.status(500).json({ message: 'Error fetching unique genres', error: error.message });
   }
 };
+
 
 
 exports.getSubgenresByGenreName = async (req, res) => {
