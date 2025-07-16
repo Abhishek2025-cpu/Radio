@@ -89,9 +89,9 @@ const {
   updateGenre,
   toggleGenreStatus,
   deleteGenre,
-  getAdminGenres,
+  getAllGenresForAdmin,
   getPublicGenres, // Use this new one!
-
+getAdminGenres,
   // Podcast Handlers
   createPodcast,
   getAllPodcasts,
@@ -119,11 +119,12 @@ router.patch('/genres/toggle-status/:id', toggleGenreStatus);
 router.delete('/genres/delete/:id', deleteGenre);
 
 // GET /api/podcasts/genres/admin/all
-router.get('/genres/admin/all', getAdminGenres);
+router.get('/genres/admin/all', getAllGenresForAdmin);
 
 // GET /api/podcasts/genres/public   <-- THIS FIXES THE ERROR
 router.get('/genres/public', getPublicGenres);
 router.get('/unique-genres',getUniqueGenres);
+router.get('/admin-all',getAdminGenres);
 
 
 // ===================================
@@ -143,7 +144,7 @@ router.get("/subgenre/:genreName", getSubgenresByGenreName);
 router.get('/by-path', getPodcastByPath);
 
 // POST /api/podcasts/create
-router.post('/create', uploadStation.single('podcastImage'), createPodcast);
+router.post('/create', upload.single('podcastImage'), createPodcast);
 
 // DELETE /api/podcasts/delete/:id
 router.delete('/delete/:id', deletePodcast);
