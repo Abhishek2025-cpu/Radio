@@ -96,7 +96,7 @@ const {
   createPodcast,
   getAllPodcasts,
   getPodcastByPath,
-  getAllGenresForAdmin,
+
   deletePodcast,
   getSubgenresByGenreName,
   togglePodcastStatus
