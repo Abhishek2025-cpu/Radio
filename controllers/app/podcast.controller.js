@@ -533,40 +533,56 @@ exports.getAllGenreShows = async (req, res) => {
   }
 };
 
-exports.toggleShowStatus = async (req, res) => {
+exports.toggleGenreShow = async (req, res) => {
   try {
     const { showId } = req.params;
     const { status } = req.body;
 
-    let updatedShow;
+    const visible = status === "true";
 
-    // First try finding in GenreShow
-    updatedShow = await GenreShow.findById(showId);
-    if (updatedShow) {
-      updatedShow.visible = status === "true";
-      await updatedShow.save();
+    if (showId.startsWith("podcast-")) {
+      const subgenreId = showId; // keep it exactly as received
+
+      let override = await GenreShowOverride.findOne({ subgenreId });
+
+      if (!override) {
+        override = new GenreShowOverride({
+          subgenreId,
+          visible,
+        });
+      } else {
+        override.visible = visible;
+      }
+
+      await override.save();
+
+      return res.status(200).json({
+        message: "Podcast show status updated via override.",
+        override,
+      });
+    } else {
+      const genreShow = await GenreShow.findById(showId);
+
+      if (!genreShow) {
+        return res.status(404).json({ message: "Genre show not found." });
+      }
+
+      genreShow.visible = visible;
+      await genreShow.save();
 
       return res.status(200).json({
         message: "Admin show status updated successfully.",
-        show: updatedShow,
+        genreShow,
       });
     }
-
-    // If not found in GenreShow, check Podcast override:
-    const override = await GenreShowOverride.findOneAndUpdate(
-      { subgenreId: showId },
-      { visible: status === "true" },
-      { new: true, upsert: true }
-    );
-
-    return res.status(200).json({
-      message: "Podcast show status updated via override.",
-      override,
-    });
   } catch (error) {
-    res.status(500).json({ message: "Error toggling show status", error: error.message });
+    res.status(500).json({
+      message: "Error toggling genre show status.",
+      error: error.message,
+    });
   }
 };
+
 
 exports.deleteGenreShow = async (req, res) => {
   try {
