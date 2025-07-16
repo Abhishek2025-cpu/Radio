@@ -1,31 +1,10 @@
-// // utils/multer.js
-// const multer = require('multer');
-// const { CloudinaryStorage } = require('multer-storage-cloudinary');
-// const cloudinary = require('../utils/cloudinary'); // configured Cloudinary instance
-
-// const storage = new CloudinaryStorage({
-//   cloudinary,
-//   params: {
-//     folder: 'stations',
-//     allowed_formats: ['jpg', 'jpeg', 'png'],
-//   },
-// });
-
-
-
-// const upload = multer({ storage });
-// module.exports = upload;
-
-// utils/multer.js
-
-
-const multer = require('multer');
+const cloudinary = require('../utils/cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { cloudinary } = require('../utils/cloudinary');
+const multer = require('multer');
 const path = require('path');
 
 const stationStorage = new CloudinaryStorage({
-  cloudinary,
+  cloudinary, // Now it's the correct pure instance
   params: {
     folder: 'stations',
     allowed_formats: ['jpg', 'jpeg', 'png'],
@@ -52,4 +31,3 @@ const uploadStation = multer({ storage: stationStorage, fileFilter });
 const uploadGenre = multer({ storage: genreStorage, fileFilter });
 
 module.exports = { uploadStation, uploadGenre };
-
