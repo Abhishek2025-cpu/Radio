@@ -296,8 +296,7 @@ exports.getUniqueGenres = async (req, res) => {
 
 
 
-const GenreShow = require("../models/GenreShow");
-const Podcast = require("../models/Podcast");
+
 
 exports.getSubgenresByGenreName = async (req, res) => {
   try {
