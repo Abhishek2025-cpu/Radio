@@ -209,33 +209,43 @@ exports.createPodcast = async (req, res) => {
  */
 exports.getAllPodcasts = async (req, res) => {
   try {
-    const podcasts = await Podcast.find().lean(); // .lean() for faster read-only operations
+    const podcasts = await Podcast.find().lean(); // Fetch all podcasts
+    const genres = await Genre.find().select('name status').lean(); // Fetch all genres with status
 
-    // Helper function to build the tree
+    // Create a map for quick genre status lookup
+    const genreStatusMap = new Map(genres.map(g => [g.name.toLowerCase(), g.status]));
+
+    // Add status to each podcast based on genre
+    const podcastsWithStatus = podcasts.map(p => {
+      const genreName = p.genre?.toLowerCase() || '';
+      const status = genreStatusMap.get(genreName) || 'enabled'; // Default to enabled if genre not found
+      return { ...p, status };
+    });
+
+    // Build tree structure with status included
     const buildTree = (list) => {
       const map = {};
       const roots = [];
 
       list.forEach((item, i) => {
-        map[item._id] = i; // Use map to look up the index of each item
-        item.children = []; // Initialize children array
+        map[item._id] = i;
+        item.children = [];
       });
 
       list.forEach((item) => {
         if (item.parent) {
-          // If it's a child, push it to its parent's children array
-          if(list[map[item.parent]]) {
+          if (list[map[item.parent]]) {
             list[map[item.parent]].children.push(item);
           }
         } else {
-          // If it's a root node, push it to the roots array
           roots.push(item);
         }
       });
+
       return roots;
     };
 
-    const podcastTree = buildTree(podcasts);
+    const podcastTree = buildTree(podcastsWithStatus);
 
     res.status(200).json({
       count: podcasts.length,
