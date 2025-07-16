@@ -312,19 +312,33 @@ exports.getSubgenresByGenreName = async (req, res) => {
     const podcastSubgenres = await Podcast.find({
       genre: genreName,
       subgenre: { $exists: true, $ne: "" },
-    })
-      .select("subgenre")
-      .lean();
+    }).select("subgenre").lean();
 
     const uniquePodcastNames = [...new Set(podcastSubgenres.map(item => item.subgenre).filter(Boolean))];
 
-    const podcastSubgenreObjects = uniquePodcastNames.map(name => ({
-      _id: new mongoose.Types.ObjectId(),
-      name,
-      image: { url: null, public_id: null },
-      status: "enabled",
-      source: "podcast",
-    }));
+    // Fetch overrides for these podcast subgenres
+    const podcastIdentifiers = uniquePodcastNames.map(name => `podcast-${name}`);
+    const overrides = await GenreShowOverride.find({
+      subgenreId: { $in: podcastIdentifiers },
+    }).lean();
+
+    const overrideMap = {};
+    overrides.forEach(override => {
+      overrideMap[override.subgenreId] = override.visible;
+    });
+
+    const podcastSubgenreObjects = uniquePodcastNames.map(name => {
+      const identifier = `podcast-${name}`;
+      const visible = overrideMap.hasOwnProperty(identifier) ? overrideMap[identifier] : true;
+
+      return visible ? {
+        _id: new mongoose.Types.ObjectId(),
+        name,
+        image: { url: null, public_id: null },
+        status: "enabled",
+        source: "podcast",
+      } : null;
+    }).filter(Boolean);
 
     // Admin genre shows
     const genreShows = await GenreShow.find({
@@ -355,6 +369,7 @@ exports.getSubgenresByGenreName = async (req, res) => {
     res.status(500).json({ message: "Error fetching subgenres", error: error.message });
   }
 };
+
 
 
 
