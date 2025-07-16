@@ -89,7 +89,7 @@ const {
   updateGenre,
   toggleGenreStatus,
   deleteGenre,
-  getAllGenresForAdmin,
+
   getPublicGenres, // Use this new one!
 getAdminGenres,
   // Podcast Handlers
@@ -119,7 +119,7 @@ router.patch('/genres/toggle-status/:id', toggleGenreStatus);
 router.delete('/genres/delete/:id', deleteGenre);
 
 // GET /api/podcasts/genres/admin/all
-router.get('/genres/admin/all', getAllGenresForAdmin);
+
 
 // GET /api/podcasts/genres/public   <-- THIS FIXES THE ERROR
 router.get('/genres/public', getPublicGenres);
