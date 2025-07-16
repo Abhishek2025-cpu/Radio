@@ -18,7 +18,7 @@ getAdminGenres,
   // Podcast Handlers
   // createPodcast,
   getAllPodcasts,
-  getPodcastByPath,
+
  getUniqueGenres,
   deletePodcast,
   getSubgenresByGenreName,
@@ -70,7 +70,7 @@ router.get('/all', getAllPodcasts);
 router.get("/subgenre/:genreName", getSubgenresByGenreName);
 
 // GET /api/podcasts/by-path
-router.get('/by-path', getPodcastByPath);
+
 
 // POST /api/podcasts/create
 // router.post('/create', upload.single('podcastImage'), createPodcast);
