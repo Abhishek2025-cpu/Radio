@@ -1,5 +1,5 @@
 const Performer = require('../../models/mongo/Performer');
-const Event = require('../models/Event');
+const Event = require('../../models/mongo/Event');
 
 // Add performer
 exports.addPerformer = async (req, res) => {
