@@ -4,14 +4,24 @@ const GoogleAd = require('../../models/mongo/GoogleAd');
 exports.addGoogleAd = async (req, res) => {
   try {
     const image = req.file?.path;
-    if (!image) return res.status(400).json({ message: "Image is required" });
+    const { imageType } = req.body;
 
-    const ad = await GoogleAd.create({ image });
+    if (!image) {
+      return res.status(400).json({ message: "Image is required" });
+    }
+
+    if (!imageType || !["horizontal", "vertical"].includes(imageType)) {
+      return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
+    }
+
+    const ad = await GoogleAd.create({ image, imageType });
+
     res.status(201).json({ success: true, ad });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // Get all Google Ads
 exports.getGoogleAds = async (req, res) => {
