@@ -32,12 +32,13 @@ exports.addGoogleAd = async (req, res) => {
 // Get all Google Ads
 exports.getGoogleAds = async (req, res) => {
   try {
-    const ads = await GoogleAd.find({}, { image: 1, isActive: 1 });
+    const ads = await GoogleAd.find({}, { image: 1, isActive: 1, imageType: 1 });
     res.json({ success: true, ads });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // Update Google Ad image
 exports.updateGoogleAd = async (req, res) => {
