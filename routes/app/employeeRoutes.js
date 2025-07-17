@@ -6,5 +6,7 @@ router.post('/login', employeeCtrl.loginEmployee);
 router.patch('/update/:id', employeeCtrl.updateEmployee);
 router.delete('/delete/:id', employeeCtrl.deleteEmployee);
 router.patch('/toggle-status/:id', employeeCtrl.toggleEmployeeStatus);
+router.get('/admins', employeeCtrl.getAdmins);
+
 
 module.exports = router;

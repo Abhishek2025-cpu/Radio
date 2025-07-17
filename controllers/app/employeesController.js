@@ -93,3 +93,17 @@ exports.toggleEmployeeStatus = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+
+exports.getAdmins = async (req, res) => {
+  try {
+    const admins = await Employee.find(
+      { role: { $in: ['Admin', 'Super Admin'] } },
+      { name: 1, email: 1, role: 1, isActive: 1 }
+    );
+
+    res.json({ success: true, admins });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
