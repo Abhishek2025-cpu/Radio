@@ -9,13 +9,13 @@ exports.addGoogleAd = async (req, res) => {
     const image = req.file?.path;
     const { imageType } = req.body;
 
-    if (!image) {
-      return res.status(400).json({ message: "Image is required" });
-    }
+    // if (!image) {
+    //   return res.status(400).json({ message: "Image is required" });
+    // }
 
-    if (!imageType || !["horizontal", "vertical"].includes(imageType.trim().toLowerCase())) {
-      return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
-    }
+    // if (!imageType || !["horizontal", "vertical"].includes(imageType.trim().toLowerCase())) {
+    //   return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
+    // }
 
     const ad = await GoogleAd.create({ image, imageType: imageType.trim().toLowerCase() });
 
