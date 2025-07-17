@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const { uploadStation } = require('../../middlewares/upload');
 const adCtrl = require('../../controllers/app/googleAdController');
-router.use(express.urlencoded({ extended: true }));
+
 
 router.post('/add', uploadStation.single('image'), adCtrl.addGoogleAd);
 router.get('/get', adCtrl.getGoogleAds);
