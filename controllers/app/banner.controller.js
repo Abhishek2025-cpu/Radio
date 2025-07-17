@@ -1,51 +1,22 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
 const cloudinary = require('../../utils/cloudinary');
-const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+
 
 
 exports.createBanner = async (req, res) => {
-
-  const storage = new CloudinaryStorage({
-  cloudinary,
-  params: (req, file) => {
-    if (file.fieldname === 'video') {
-      return { folder: 'app-banners/videos', resource_type: 'video' };
-    }
-    return { folder: 'app-banners/images', resource_type: 'image' };
-  }
-});
-
-const upload = multer({ storage });
-
   try {
     const { type, title, content, link, active } = req.body;
     let times = req.body.time;
 
     if (!Array.isArray(times)) times = times ? [times] : [];
 
-    let images = [];
-    if (req.files?.images?.length) {
-      for (let i = 0; i < req.files.images.length; i++) {
-        const file = req.files.images[i];
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'app-banners/images'
-        });
-        images.push({
-          url: result.secure_url,
-          time: times[i] || null
-        });
-      }
-    }
+    const images = (req.files?.images || []).map((file, index) => ({
+      url: file.path,   // Path already contains Cloudinary URL
+      time: times[index] || null
+    }));
 
-    let video = null;
-    if (req.files?.video?.[0]) {
-      const result = await cloudinary.uploader.upload(req.files.video[0].path, {
-        resource_type: 'video',
-        folder: 'app-banners/videos'
-      });
-      video = result.secure_url;
-    }
+    const video = req.files?.video?.[0]?.path || null;
 
     const banner = new AppBanner({
       type,
@@ -54,7 +25,7 @@ const upload = multer({ storage });
       images,
       video,
       link,
-      active: active === 'true' || active === true || active === undefined
+      active: active === 'true' || active === true
     });
 
     await banner.save();

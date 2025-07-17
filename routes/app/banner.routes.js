@@ -8,11 +8,10 @@ const multer = require('multer');
 //   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 // });
 
-const { uploadStation } = require('../../middlewares/upload');
-
+const upload = require('../../middlewares/bannerupload');
 router.post(
   '/add-banner',
-  uploadStation.fields([
+  upload.fields([
     { name: 'images', maxCount: 10 },
     { name: 'video', maxCount: 1 }
   ]),
