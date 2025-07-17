@@ -1,6 +1,6 @@
 // POST /api/employees/register
 const Employee = require('../../models/mongo/Employee');
-
+const bcrypt = require('bcrypt');
 exports.registerEmployee = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
