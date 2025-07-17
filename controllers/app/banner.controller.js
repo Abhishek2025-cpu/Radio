@@ -1,33 +1,46 @@
 const AppBanner = require('../../models/mongo/AppBanner.model');// Placeholder content for AppBanner.model.js
 const cloudinary = require('../../utils/cloudinary');
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 
 exports.createBanner = async (req, res) => {
+
+  const storage = new CloudinaryStorage({
+  cloudinary,
+  params: (req, file) => {
+    if (file.fieldname === 'video') {
+      return { folder: 'app-banners/videos', resource_type: 'video' };
+    }
+    return { folder: 'app-banners/images', resource_type: 'image' };
+  }
+});
+
+const upload = multer({ storage });
+
   try {
     const { type, title, content, link, active } = req.body;
     let times = req.body.time;
-    if (!Array.isArray(times)) {
-      // If only one time is sent, make it an array
-      times = times ? [times] : [];
-    }
+
+    if (!Array.isArray(times)) times = times ? [times] : [];
 
     let images = [];
-    if (req.files['images']) {
-      for (let i = 0; i < req.files['images'].length; i++) {
-        const file = req.files['images'][i];
+    if (req.files?.images?.length) {
+      for (let i = 0; i < req.files.images.length; i++) {
+        const file = req.files.images[i];
         const result = await cloudinary.uploader.upload(file.path, {
           folder: 'app-banners/images'
         });
         images.push({
           url: result.secure_url,
-          time: times[i] || null // Assign corresponding time or null
+          time: times[i] || null
         });
       }
     }
 
     let video = null;
-    if (req.files['video'] && req.files['video'][0]) {
-      const result = await cloudinary.uploader.upload(req.files['video'][0].path, {
+    if (req.files?.video?.[0]) {
+      const result = await cloudinary.uploader.upload(req.files.video[0].path, {
         resource_type: 'video',
         folder: 'app-banners/videos'
       });
@@ -41,7 +54,7 @@ exports.createBanner = async (req, res) => {
       images,
       video,
       link,
-      active: active === 'true' || active === true
+      active: active === 'true' || active === true || active === undefined
     });
 
     await banner.save();
@@ -56,9 +69,13 @@ exports.createBanner = async (req, res) => {
 };
 
 
+
 exports.getBanners = async (req, res) => {
   try {
-    const banners = await AppBanner.find({ active: true }).sort({ createdAt: -1 }).select('-__v');
+    const banners = await AppBanner.find({
+      $or: [{ active: true }, { active: { $exists: false } }]
+    }).sort({ createdAt: -1 }).select('-__v');
+
     res.status(200).json({
       message: '✅ Banners fetched successfully',
       data: banners
@@ -67,6 +84,7 @@ exports.getBanners = async (req, res) => {
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
+
 
 // GET /api/app/admin-get-banners
 exports.adminGetBanners = async (req, res) => {

@@ -13,7 +13,7 @@ const { uploadStation } = require('../../middlewares/upload');
 router.post(
   '/add-banner',
   uploadStation.fields([
-    { name: 'images', maxCount: 5 },
+    { name: 'images', maxCount: 10 },
     { name: 'video', maxCount: 1 }
   ]),
 createBanner
