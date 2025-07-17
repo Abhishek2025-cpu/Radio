@@ -59,6 +59,7 @@ app.use('/api/game-banners', require('./routes/app/gameBannerRoutes'));
 app.use('/api/games', require('./routes/app/gameRoutes'));
 app.use('/api/participants', require('./routes/app/participantRoutes'));
 app.use('/api/playbacks', require('./routes/app/playbackRoutes'));
+app.use('/api/employees',require('./routes/app/employeeRoutes'));
 
 
 
