@@ -38,14 +38,32 @@ exports.updateGoogleAd = async (req, res) => {
   try {
     const { id } = req.params;
     const image = req.file?.path;
-    if (!image) return res.status(400).json({ message: "New image is required" });
+    const { imageType } = req.body;
 
-    const ad = await GoogleAd.findByIdAndUpdate(id, { image }, { new: true });
+    if (!image) {
+      return res.status(400).json({ message: "New image is required" });
+    }
+
+    if (!imageType || !["horizontal", "vertical"].includes(imageType)) {
+      return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
+    }
+
+    const ad = await GoogleAd.findByIdAndUpdate(
+      id,
+      { image, imageType },
+      { new: true }
+    );
+
+    if (!ad) {
+      return res.status(404).json({ message: "Ad not found" });
+    }
+
     res.json({ success: true, ad });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // Toggle Ad isActive
 exports.toggleGoogleAd = async (req, res) => {
