@@ -17,16 +17,17 @@ exports.createBanner = async (req, res) => {
     }));
 
     const video = req.files?.video?.[0]?.path || null;
+    
+const banner = new AppBanner({
+  type,
+  title,
+  content,
+  images,
+  video,
+  link,
+  active: active === 'false' || active === false ? false : true
+});
 
-    const banner = new AppBanner({
-      type,
-      title,
-      content,
-      images,
-      video,
-      link,
-      active: active === 'true' || active === true
-    });
 
     await banner.save();
 
