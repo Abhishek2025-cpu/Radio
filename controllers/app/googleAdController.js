@@ -3,27 +3,28 @@ const GoogleAd = require('../../models/mongo/GoogleAd');
 // Add new Google Ad
 exports.addGoogleAd = async (req, res) => {
   try {
-    console.log("req.body:", req.body);
-    console.log("req.file:", req.file);
-
     const image = req.file?.path;
-    const imageType = req.body?.imageType?.trim()?.toLowerCase();
+    const { imageType } = req.body;
 
     if (!image) {
       return res.status(400).json({ message: "Image is required" });
     }
 
-    if (!imageType || !["horizontal", "vertical"].includes(imageType)) {
+    if (!imageType || !["horizontal", "vertical"].includes(imageType.trim().toLowerCase())) {
       return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
     }
 
-    const ad = await GoogleAd.create({ image, imageType });
+    const ad = await GoogleAd.create({
+      image,
+      imageType: imageType.trim().toLowerCase(),
+    });
 
     res.status(201).json({ success: true, ad });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 
 
@@ -49,25 +50,22 @@ exports.updateGoogleAd = async (req, res) => {
       return res.status(400).json({ message: "New image is required" });
     }
 
-    if (!imageType || !["horizontal", "vertical"].includes(imageType)) {
+    if (!imageType || !["horizontal", "vertical"].includes(imageType.trim().toLowerCase())) {
       return res.status(400).json({ message: "Valid imageType is required: 'horizontal' or 'vertical'" });
     }
 
     const ad = await GoogleAd.findByIdAndUpdate(
       id,
-      { image, imageType },
+      { image, imageType: imageType.trim().toLowerCase() },
       { new: true }
     );
-
-    if (!ad) {
-      return res.status(404).json({ message: "Ad not found" });
-    }
 
     res.json({ success: true, ad });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 
 // Toggle Ad isActive
