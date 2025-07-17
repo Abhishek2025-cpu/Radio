@@ -4,12 +4,10 @@ const cloudinary = require('../utils/cloudinary');
 
 const storage = new CloudinaryStorage({
   cloudinary,
-  params: (req, file) => {
-    if (file.fieldname === 'video') {
-      return { folder: 'app-banners/videos', resource_type: 'video' };
-    }
-    return { folder: 'app-banners/images', resource_type: 'image' };
-  }
+  params: async (req, file) => ({
+    folder: file.fieldname === 'video' ? 'app-banners/videos' : 'app-banners/images',
+    resource_type: file.fieldname === 'video' ? 'video' : 'image'
+  })
 });
 
 const bannerupload = multer({ storage });
