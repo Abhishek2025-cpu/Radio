@@ -26,7 +26,16 @@ router.post(
 
 router.get('/get-banners', getBanners);
 router.get('/admin-get-banners', adminGetBanners); 
-router.put('/update-banner/:id', updateBanner);
+router.put(
+  '/update-banner/:id',
+  // This middleware is required to process new files and populate `req.files`.
+  appBannerUploader.fields([
+    { name: 'images', maxCount: 10 },
+    { name: 'video', maxCount: 1 }
+  ]),
+  updateBanner // Your updated controller function
+);
+
 router.patch('/toggle-active/:id',toggleBannerActive);
 router.delete('/delete-banner/:id', deleteBanner);
 
