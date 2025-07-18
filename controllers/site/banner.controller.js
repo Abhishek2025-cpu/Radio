@@ -1,59 +1,37 @@
 const SiteBanner = require('../../models/mongo/SiteBanner.model');
-const { getIO } = require("../../sockets/sockets"); // adjust path as needed
-
-const cloudinary = require('../../utils/cloudinary'); // adjust path as needed
+// No need to require cloudinary here unless you use it for other things like deletion
+// const cloudinary = require('../../utils/cloudinary');
 
 exports.createBanner = async (req, res) => {
   try {
     const { type, title, content, link, active } = req.body;
-    let images = [];
-    let video = null;
 
-    // Upload images to Cloudinary
-    if (req.files && req.files.images) {
-      const imageFiles = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-      for (const file of imageFiles) {
-        const result = await cloudinary.uploader.upload(file.path, { folder: 'banners/images' });
-        images.push(result.secure_url);
-      }
-    }
+    // The middleware has already uploaded the files.
+    // req.files.images is an array of files, and each file.path is the Cloudinary URL.
+    const images = (req.files?.images || []).map(file => file.path);
 
-    // Upload video to Cloudinary
-    if (req.files && req.files.video) {
-      const videoFile = Array.isArray(req.files.video) ? req.files.video[0] : req.files.video;
-      const result = await cloudinary.uploader.upload(videoFile.path, {
-        resource_type: 'video',
-        folder: 'banners/videos'
-      });
-      video = result.secure_url;
-    }
+    // req.files.video is an array with one file. Its path is the Cloudinary URL.
+    const video = req.files?.video?.[0]?.path || null;
 
     const banner = new SiteBanner({
       type,
       title: title || null,
       content: content || null,
-      images,
-      video,
+      images, // This is now an array of Cloudinary URLs
+      video,  // This is now a single Cloudinary URL or null
       link: link || null,
-      active: active !== undefined ? active : true
+      active: active === 'false' || active === false ? false : true
     });
 
     const savedBanner = await banner.save();
+
     res.status(201).json({
       message: '✅ Site banner created successfully',
       banner: savedBanner
     });
 
   } catch (err) {
-    res.status(400).json({ error: `❌ ${err.message}` });
-  }
-};
-
-exports.getBanners = async (req, res) => {
-  try {
-    const banners = await SiteBanner.find({ active: true }).sort({ createdAt: -1 });
-    res.json(banners);
-  } catch (err) {
+    console.error("Error creating banner:", err); // Log the full error for debugging
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };

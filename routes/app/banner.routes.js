@@ -8,14 +8,20 @@ const multer = require('multer');
 //   filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
 // });
 
-const upload = require('../../middlewares/bannerupload');
+// 1. Import the factory function from bannerupload.js
+const createUploader = require('../../middlewares/bannerupload');
+
+// 2. Call the function to create a middleware specifically for 'app' banners
+const appBannerUploader = createUploader('app');
+
 router.post(
   '/add-banner',
-  upload.fields([
+  // 3. Use the generated middleware
+  appBannerUploader.fields([
     { name: 'images', maxCount: 10 },
     { name: 'video', maxCount: 1 }
   ]),
-createBanner
+  createBanner
 );
 
 router.get('/get-banners', getBanners);

@@ -1,20 +1,25 @@
 const express = require('express');
-const router = express.Router();
 
 const bannerController = require('../../controllers/site/banner.controller');
 
-const multer = require('multer');
-const { storage } = require('../../utils/cloudinary'); 
-const upload = multer({ storage });
+// 1. Import the factory function from bannerupload.js
+// 1. Import the same factory function from bannerupload.js
+const createUploader = require('../../middlewares/bannerupload');
+
+// 2. Call the function to create a middleware specifically for 'site' banners
+const siteBannerUploader = createUploader('site');
 
 router.post(
   '/add-banner',
-  upload.fields([
+  // 3. Use the newly generated middleware
+  siteBannerUploader.fields([
     { name: 'images', maxCount: 5 },
     { name: 'video', maxCount: 1 }
   ]),
-  bannerController.createBanner
+  createBanner
 );
+
+
 
 // GET: Get all banners
 router.get('/get-banners', bannerController.getBanners);
