@@ -1,7 +1,7 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
 // Your Cloudinary helper should upload from a buffer, which is correct
-const { uploadToCloudinary } = require('../../utils/cloudinary'); 
+const { uploadToCloudinary } = require('../../utils/uploadToCloudinary'); 
 
 exports.createNews = async (req, res) => {
   try {
