@@ -26,7 +26,16 @@ router.post(
 router.get('/get-banners', bannerController.getBanners);
 // site.routes.js
 router.get('/admin-get-banners', bannerController.adminGetBanners);
-router.put('/update-banner/:id', bannerController.updateBanner);
+router.put(
+  '/update-banner/:id',
+  // THIS MIDDLEWARE IS ESSENTIAL. It processes the files and adds them to `req.files`.
+  siteBannerUploader.fields([
+    { name: 'images', maxCount: 5 },
+    { name: 'video', maxCount: 1 }
+  ]),
+  bannerController.updateBanner
+);
+
 router.patch('/toggle-active/:id', bannerController.toggleBannerActive);
 router.delete('/delete-banner/:id', bannerController.deleteBanner);
 

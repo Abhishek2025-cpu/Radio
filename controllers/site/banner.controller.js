@@ -61,41 +61,50 @@ exports.adminGetBanners = async (req, res) => {
 
 exports.updateBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active } = req.body;
+    const { id } = req.params;
+    
+    // 1. Start with the text data from the request body.
+    const updateData = { ...req.body };
 
-    let images = [];
-    if (req.files && req.files.images) {
-      const imageFiles = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-      for (const file of imageFiles) {
-        const result = await cloudinary.uploader.upload(file.path, { folder: 'banners/images' });
-        images.push(result.secure_url);
-      }
-    } else if (req.body.images) {
-      images = req.body.images; // expects array of URLs
+    // 2. Check for new image uploads.
+    // The middleware (from your route) puts uploaded files into `req.files`.
+    if (req.files?.images?.length > 0) {
+      // Create a new array of Cloudinary URLs from the uploaded files.
+      // This will completely overwrite the old image array in the database.
+      updateData.images = req.files.images.map(file => file.path);
     }
 
-    let video = null;
-    if (req.files && req.files.video) {
-      const videoFile = Array.isArray(req.files.video) ? req.files.video[0] : req.files.video;
-      const result = await cloudinary.uploader.upload(videoFile.path, {
-        resource_type: 'video',
-        folder: 'banners/videos'
-      });
-      video = result.secure_url;
-    } else if (req.body.video) {
-      video = req.body.video;
+    // 3. Check for a new video upload.
+    if (req.files?.video?.length > 0) {
+      // Get the new video's Cloudinary URL.
+      // This will overwrite the old video URL in the database.
+      updateData.video = req.files.video[0].path;
+    }
+    
+    // 4. Handle the 'active' boolean status correctly.
+    // HTML forms send 'true'/'false' as strings.
+    if (updateData.active !== undefined) {
+        updateData.active = updateData.active === 'true';
     }
 
-    const updated = await SiteBanner.findByIdAndUpdate(
-      req.params.id,
-      { type, title, content, images, video, link, active },
-      { new: true }
-    );
+    // 5. Find the banner by its ID and update it in the database.
+    // The { new: true } option tells Mongoose to return the updated document.
+    const updatedBanner = await SiteBanner.findByIdAndUpdate(id, updateData, { new: true });
 
-    if (!updated) return res.status(404).json({ error: '❌ Banner not found' });
+    // If no banner was found with that ID, return an error.
+    if (!updatedBanner) {
+      return res.status(404).json({ error: '❌ Banner not found' });
+    }
 
-    res.json({ message: '✅ Site banner updated successfully', data: updated });
+    // 6. Send the successful response.
+    res.status(200).json({
+      message: '✅ Banner updated successfully',
+      data: updatedBanner
+    });
+
   } catch (err) {
+    // Handle any potential errors.
+    console.error("Update Banner Error:", err);
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
