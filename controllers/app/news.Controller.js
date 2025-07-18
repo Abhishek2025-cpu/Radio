@@ -1,47 +1,49 @@
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
-const { uploadToCloudinary } = require('../../utils/cloudinary');
+// Your Cloudinary helper should upload from a buffer, which is correct
+const { uploadToCloudinary } = require('../../utils/cloudinary'); 
 
 exports.createNews = async (req, res) => {
   try {
     const { author, heading, paragraph, subParagraph } = req.body;
 
+    // --- Validation ---
     if (!heading || !paragraph || !author) {
-      return res.status(400).json({ error: "Missing required fields." });
+      return res.status(400).json({ error: "Missing required fields: author, heading, and paragraph." });
+    }
+    // Check if files were actually uploaded
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "At least one media file (image, audio, or video) is required." });
     }
 
     const imageUrls = [];
     const audioUrls = [];
     const videoUrls = [];
 
-    const mediaFiles = req.files || [];
+    // --- Process Uploaded Files in Parallel ---
+    const uploadPromises = req.files.map(file => {
+      // Pass the file's buffer to your Cloudinary uploader
+      return uploadToCloudinary(file.buffer, {
+        resource_type: 'auto', // Let Cloudinary detect the type
+        folder: 'news-media'   // Organize uploads into a folder
+      });
+    });
 
-    if (!Array.isArray(mediaFiles) || mediaFiles.length === 0) {
-      console.warn("⚠️ No media files found in request.");
-    } else {
-      for (const file of mediaFiles) {
-        try {
-          const uploadResult = await uploadToCloudinary(file.buffer, file.mimetype);
-          const fileUrl = uploadResult.secure_url;
+    const uploadResults = await Promise.all(uploadPromises);
 
-          // Log resource type and MIME type for debugging
-          console.log(`📁 Uploaded: ${file.originalname}, Type: ${uploadResult.resource_type}, MIME: ${file.mimetype}`);
-
-          if (uploadResult.resource_type === 'image') {
-            imageUrls.push(fileUrl);
-          } else if (uploadResult.resource_type === 'video') {
-            if (file.mimetype.startsWith('audio/')) {
-              audioUrls.push(fileUrl);
-            } else {
-              videoUrls.push(fileUrl);
-            }
-          }
-        } catch (uploadError) {
-          console.error("❌ Cloudinary upload failed:", uploadError);
-        }
+    // --- Sort URLs by Type ---
+    uploadResults.forEach((result, index) => {
+      const originalFile = req.files[index];
+      if (result.resource_type === 'image') {
+        imageUrls.push(result.secure_url);
+      } else if (originalFile.mimetype.startsWith('audio/')) {
+        audioUrls.push(result.secure_url);
+      } else if (originalFile.mimetype.startsWith('video/')) {
+        videoUrls.push(result.secure_url);
       }
-    }
+    });
 
+    // --- Create Database Entry ---
     const newEntry = await News.create({
       author,
       heading,
@@ -54,6 +56,7 @@ exports.createNews = async (req, res) => {
     });
 
     return res.status(201).json({ message: 'News created successfully.', news: newEntry });
+
   } catch (err) {
     console.error("❌ Error in createNews:", err);
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
