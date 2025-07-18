@@ -17,7 +17,7 @@ router.post(
     { name: 'images', maxCount: 5 },
     { name: 'video', maxCount: 1 }
   ]),
-  createBanner
+  bannerController.createBanner
 );
 
 
