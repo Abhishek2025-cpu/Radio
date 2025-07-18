@@ -1,6 +1,7 @@
 const express = require('express');
 
 const bannerController = require('../../controllers/site/banner.controller');
+const router = express.Router();
 
 // 1. Import the factory function from bannerupload.js
 // 1. Import the same factory function from bannerupload.js
