@@ -69,55 +69,62 @@ exports.createNews = async (req, res) => {
 exports.updateNews = async (req, res) => {
   try {
     const { id } = req.params;
-    const { author, heading, paragraph, subParagraph } = req.body;
+    const { author, heading, paragraph, subParagraph, visible } = req.body;
 
-    // Build the update object for text fields
-    const textUpdateData = {};
-    if (author) textUpdateData.author = author;
-    if (heading) textUpdateData.heading = heading;
-    if (paragraph) textUpdateData.paragraphChunks = splitTextByCharLength(paragraph);
-    if (subParagraph) textUpdateData.subParagraphChunks = splitTextByCharLength(subParagraph);
-
-    // Handle file uploads using the new, flexible logic
-    // NOTE: This logic REPLACES existing files. If you upload new images, the old ones will be removed.
-    const files = req.files || [];
-    if (files.length > 0) {
-      const imageUrls = [];
-      const audioUrls = [];
-      const videoUrls = [];
-
-      for (const file of files) {
-        if (file.mimetype.startsWith('image/')) {
-          imageUrls.push(file.path);
-        } else if (file.mimetype.startsWith('audio/')) {
-          audioUrls.push(file.path);
-        } else if (file.mimetype.startsWith('video/')) {
-          videoUrls.push(file.path);
-        }
-      }
-      
-      // Add the new file arrays to the update object, using the CORRECT field names
-      if (imageUrls.length > 0) textUpdateData.imageUrls = imageUrls;
-      if (audioUrls.length > 0) textUpdateData.audioUrls = audioUrls;
-      if (videoUrls.length > 0) textUpdateData.videoUrls = videoUrls;
-    }
-
-    // Check if there is anything to update
-    if (Object.keys(textUpdateData).length === 0) {
-        return res.status(400).json({ error: 'No update data provided.' });
-    }
-
-    console.log("📦 Final Payload to Update:", textUpdateData);
-
-    const updatedNews = await News.findByIdAndUpdate(
-      id, 
-      { $set: textUpdateData }, // Use $set to update fields
-      { new: true, runValidators: true } // Options to return the new doc and run schema validations
-    );
-
-    if (!updatedNews) {
+    // 1. Find the existing news article first. This is crucial.
+    const existingNews = await News.findById(id);
+    if (!existingNews) {
       return res.status(404).json({ error: 'News not found' });
     }
+
+    // 2. Prepare the object for database update.
+    const updateData = {};
+
+    // Update text fields only if they are provided in the request
+    if (author) updateData.author = author;
+    if (heading) updateData.heading = heading;
+    if (paragraph) updateData.paragraphChunks = splitTextByCharLength(paragraph);
+    if (subParagraph) updateData.subParagraphChunks = splitTextByCharLength(subParagraph);
+    if (visible !== undefined) updateData.visible = visible === 'true';
+
+    // 3. Handle NEW file uploads
+    if (req.files && req.files.length > 0) {
+      // Upload all new files to Cloudinary in parallel
+      const uploadPromises = req.files.map(file =>
+        uploadToCloudinary(file.buffer, file.mimetype)
+      );
+      const uploadResults = await Promise.all(uploadPromises);
+
+      // Initialize new file URL arrays
+      const newImageUrls = [];
+      const newAudioUrls = [];
+      const newVideoUrls = [];
+
+      // Sort the new URLs based on their type
+      uploadResults.forEach((result, index) => {
+        const originalMimetype = req.files[index].mimetype;
+        if (result.resource_type === 'image') {
+          newImageUrls.push(result.secure_url);
+        } else if (originalMimetype.startsWith('audio/')) {
+          newAudioUrls.push(result.secure_url);
+        } else if (originalMimetype.startsWith('video/')) {
+          newVideoUrls.push(result.secure_url);
+        }
+      });
+
+      // 4. MERGE old URLs with new URLs
+      // This keeps existing files and adds the new ones.
+      updateData.imageUrls = [...existingNews.imageUrls, ...newImageUrls];
+      updateData.audioUrls = [...existingNews.audioUrls, ...newAudioUrls];
+      updateData.videoUrls = [...existingNews.videoUrls, ...newVideoUrls];
+    }
+
+    // 5. Update the document in the database
+    const updatedNews = await News.findByIdAndUpdate(
+      id,
+      { $set: updateData }, // Use $set to update only the provided fields
+      { new: true } // This option returns the updated document
+    );
 
     res.status(200).json({ message: 'News updated successfully', data: updatedNews });
 
@@ -126,7 +133,6 @@ exports.updateNews = async (req, res) => {
     res.status(500).json({
       error: "Internal Server Error",
       message: error.message,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
   }
 };
