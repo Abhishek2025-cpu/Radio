@@ -10,7 +10,7 @@ const { uploadAudio } = require('../../middlewares/upload');
 
 router.post(
   '/submit-form',
- uploadAudio.any()
+ uploadAudio.single('audio')
 ,
   formController.submitForm
 );

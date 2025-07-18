@@ -7,11 +7,11 @@ exports.submitForm = async (req, res) => {
     const { name, email, contactNo, city } = req.body;
     let audioUrl = null;
 
-    // Upload audio file to Cloudinary
-    if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        resource_type: 'video', // Cloudinary uses 'video' for audio files
-        folder: 'form-audios'
+    if (req.files && req.files.length > 0) {
+      const file = req.files[0]; // Taking the first file from array
+      const result = await cloudinary.uploader.upload(file.path, {
+        resource_type: 'video',
+        folder: 'form-audios',
       });
       audioUrl = result.secure_url;
     } else {
@@ -23,7 +23,7 @@ exports.submitForm = async (req, res) => {
       email,
       contactNo,
       city,
-      audioUrl
+      audioUrl,
     });
 
     const saved = await submission.save();
@@ -32,6 +32,7 @@ exports.submitForm = async (req, res) => {
     res.status(400).json({ error: `❌ ${err.message}` });
   }
 };
+
 
 
 exports.getForms = async (req, res) => {
