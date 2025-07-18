@@ -110,6 +110,7 @@ exports.updateBanner = async (req, res) => {
 };
 
 
+
 exports.toggleBannerActive = async (req, res) => {
   try {
     if (typeof req.body.active === "undefined") {
