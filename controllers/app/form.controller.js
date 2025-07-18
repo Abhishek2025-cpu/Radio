@@ -7,25 +7,22 @@ const FormSubmission = require('../../models/mongo/FormSubmission');
 exports.submitForm = async (req, res) => {
   try {
     const { name, email, contactNo, city } = req.body;
-    
-    // 1. Check req.file (singular), not req.files.
-    // If no file was uploaded, the middleware would have already handled it,
-    // but this is a good safety check.
+
+    // Check req.file (singular), which is populated by .single()
     if (!req.file) {
       return res.status(400).json({ error: 'Audio file is required.' });
     }
 
-    // 2. The middleware has already uploaded the file.
-    // The final Cloudinary URL is in req.file.path.
+    // The CloudinaryStorage middleware has already uploaded the file.
+    // The final URL is in req.file.path.
     const audioUrl = req.file.path;
 
-    // 3. Create and save the new submission.
     const submission = new FormSubmission({
       name,
       email,
       contactNo,
       city,
-      audioUrl, // Use the URL directly from the middleware
+      audioUrl,
     });
 
     const saved = await submission.save();
@@ -36,7 +33,6 @@ exports.submitForm = async (req, res) => {
     res.status(400).json({ error: `❌ ${err.message}` });
   }
 };
-
 
 exports.getForms = async (req, res) => {
   try {
