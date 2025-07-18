@@ -1,44 +1,46 @@
+// In controllers/app/news.Controller.js
+
 const News = require('../../models/mongo/news');
 const splitTextByCharLength = require('../../utils/textSplitter');
-// Your Cloudinary helper should upload from a buffer, which is correct
-const { uploadToCloudinary } = require('../../utils/uploadToCloudinary'); 
+// This import should now be correct from our last fix
+const { uploadToCloudinary } = require('../../utils/uploadToCloudinary');
 
 exports.createNews = async (req, res) => {
   try {
     const { author, heading, paragraph, subParagraph } = req.body;
 
-    // --- Validation ---
     if (!heading || !paragraph || !author) {
-      return res.status(400).json({ error: "Missing required fields: author, heading, and paragraph." });
+      return res.status(400).json({ error: "Missing required fields." });
     }
-    // Check if files were actually uploaded
     if (!req.files || req.files.length === 0) {
-      return res.status(400).json({ error: "At least one media file (image, audio, or video) is required." });
+      return res.status(400).json({ error: "At least one media file is required." });
     }
 
-    const imageUrls = [];
-    const audioUrls = [];
-    const videoUrls = [];
+    const imageUrls = [], audioUrls = [], videoUrls = [];
 
     // --- Process Uploaded Files in Parallel ---
     const uploadPromises = req.files.map(file => {
-      // Pass the file's buffer to your Cloudinary uploader
-      return uploadToCloudinary(file.buffer, {
-        resource_type: 'auto', // Let Cloudinary detect the type
-        folder: 'news-media'   // Organize uploads into a folder
-      });
+      //
+      // --- THIS IS THE FIX ---
+      // We must pass the file's mimetype string as the second argument,
+      // not an options object.
+      //
+      // WRONG: return uploadToCloudinary(file.buffer, { resource_type: 'auto', ... });
+      // CORRECT:
+      return uploadToCloudinary(file.buffer, file.mimetype);
     });
 
+    // Wait for all uploads to finish
     const uploadResults = await Promise.all(uploadPromises);
 
     // --- Sort URLs by Type ---
     uploadResults.forEach((result, index) => {
-      const originalFile = req.files[index];
+      const originalMimetype = req.files[index].mimetype;
       if (result.resource_type === 'image') {
         imageUrls.push(result.secure_url);
-      } else if (originalFile.mimetype.startsWith('audio/')) {
+      } else if (originalMimetype.startsWith('audio/')) {
         audioUrls.push(result.secure_url);
-      } else if (originalFile.mimetype.startsWith('video/')) {
+      } else if (originalMimetype.startsWith('video/')) {
         videoUrls.push(result.secure_url);
       }
     });
@@ -62,7 +64,6 @@ exports.createNews = async (req, res) => {
     return res.status(500).json({ error: 'Internal Server Error', message: err.message });
   }
 };
-
 
 // --- THIS IS THE FIXED FUNCTION ---
 exports.updateNews = async (req, res) => {
