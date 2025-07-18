@@ -36,6 +36,15 @@ exports.createBanner = async (req, res) => {
   }
 };
 
+exports.getBanners = async (req, res) => {
+  try {
+    const banners = await SiteBanner.find({ active: true }).sort({ createdAt: -1 });
+    res.json(banners);
+  } catch (err) {
+    res.status(500).json({ error: `❌ ${err.message}` });
+  }
+};
+
 
 exports.adminGetBanners = async (req, res) => {
   try {
@@ -49,46 +58,6 @@ exports.adminGetBanners = async (req, res) => {
   }
 };
 
-
-exports.getBanners = async (req, res) => {
-  try {
-    // --- Filtering ---
-    // Start with an empty filter object
-    const filter = {};
-    // Check for the 'active' query parameter (e.g., /api/app-banners?active=true)
-    if (req.query.active !== undefined) {
-      filter.active = req.query.active === 'true';
-    }
-
-    // --- Pagination ---
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
-    const skip = (page - 1) * limit;
-
-    // --- Database Query ---
-    // Get the total count of documents that match the filter for pagination purposes
-    const totalBanners = await AppBanner.countDocuments(filter);
-    
-    // Get the paginated list of banners, sorted by newest first
-    const banners = await AppBanner.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
-
-    res.status(200).json({
-      message: '✅ App banners fetched successfully',
-      data: banners,
-      pagination: {
-        totalBanners,
-        currentPage: page,
-        totalPages: Math.ceil(totalBanners / limit),
-      }
-    });
-
-  } catch (err) {
-    res.status(500).json({ error: `❌ ${err.message}` });
-  }
-};
 
 exports.updateBanner = async (req, res) => {
   try {
