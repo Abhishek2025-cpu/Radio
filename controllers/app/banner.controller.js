@@ -77,55 +77,54 @@ exports.adminGetBanners = async (req, res) => {
 
 
 
-// PUT /api/app/update-banner/:id
-// PUT /api/app/update-banner/:id
 exports.updateBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active } = req.body;
-    let times = req.body.time;
-    if (!Array.isArray(times)) {
-      times = times ? [times] : [];
+    const { type, title, content, link, active, time } = req.body;
+
+    // Handle image (single)
+    let imageObj = null;
+    if (req.files?.image?.[0]) {
+      const file = req.files.image[0];
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: 'app-banners/images'
+      });
+      imageObj = {
+        url: result.secure_url,
+        time: time || null
+      };
+    } else if (req.body.image) {
+      imageObj = {
+        url: req.body.image,
+        time: time || null
+      };
     }
 
-    let images = [];
-    if (req.files && req.files['images']) {
-      for (let i = 0; i < req.files['images'].length; i++) {
-        const file = req.files['images'][i];
-        const result = await cloudinary.uploader.upload(file.path, {
-          folder: 'app-banners/images'
-        });
-        images.push({
-          url: result.secure_url,
-          time: times[i] || null
-        });
-      }
-    } else if (req.body.images) {
-      images = req.body.images; // expects array of {url, time}
-    }
-
-    let video = null;
-    if (req.files && req.files['video'] && req.files['video'][0]) {
-      const result = await cloudinary.uploader.upload(req.files['video'][0].path, {
+    // Handle video (single)
+    let videoUrl = null;
+    if (req.files?.video?.[0]) {
+      const result = await cloudinary.uploader.upload(req.files.video[0].path, {
         resource_type: 'video',
         folder: 'app-banners/videos'
       });
-      video = result.secure_url;
+      videoUrl = result.secure_url;
     } else if (req.body.video) {
-      video = req.body.video;
+      videoUrl = req.body.video;
     }
 
+    // Build update object
     const updateData = {
       type,
       title,
       content,
-      images,
-      video,
       link,
-      active: active === 'true' || active === true
+      active: active === 'true' || active === true,
+      video: videoUrl,
+      images: imageObj
     };
 
     const banner = await AppBanner.findByIdAndUpdate(req.params.id, updateData, { new: true });
     if (!banner) return res.status(404).json({ error: 'Banner not found' });
+
     res.json({ message: 'Banner updated successfully', data: banner });
   } catch (err) {
     res.status(500).json({ error: err.message });

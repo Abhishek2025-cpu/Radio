@@ -32,12 +32,12 @@ router.get('/admin-get-banners', adminGetBanners);
 router.put(
   '/update-banner/:id',
   appBannerUploader.fields([
-    // CHANGE THIS: from 'images' to 'image' and maxCount to 1
-    { name: 'image', maxCount: 1 }, 
+    { name: 'image', maxCount: 1 },
     { name: 'video', maxCount: 1 }
   ]),
-  updateBanner // You will also need to adjust the 'updateBanner' controller to handle a single image object
+  updateBanner
 );
+
 
 router.patch('/toggle-active/:id',toggleBannerActive);
 router.delete('/delete-banner/:id', deleteBanner);
