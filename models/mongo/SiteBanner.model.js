@@ -8,7 +8,7 @@ const siteBannerSchema = new mongoose.Schema({
   },
   title: String,
   content: String,
-  images: String,
+  image: String,  // Changed from images: [String] to image: String
   video: String,
   link: String,
   active: { type: Boolean, default: true },

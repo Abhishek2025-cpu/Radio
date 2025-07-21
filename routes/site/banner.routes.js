@@ -12,10 +12,9 @@ const siteBannerUploader = createUploader('site');
 
 router.post(
   '/add-banner',
-  // 3. Use the newly generated middleware
   siteBannerUploader.fields([
-    { name: 'images', maxCount: 5 },
-    { name: 'video', maxCount: 1 }
+    { name: 'image', maxCount: 1 },   // ✅ one image
+    { name: 'video', maxCount: 1 }    // ✅ one video
   ]),
   bannerController.createBanner
 );

@@ -6,19 +6,19 @@ exports.createBanner = async (req, res) => {
   try {
     const { type, title, content, link, active } = req.body;
 
-    // The middleware has already uploaded the files.
-    // req.files.images is an array of files, and each file.path is the Cloudinary URL.
-    const images = (req.files?.images || []).map(file => file.path);
-
-    // req.files.video is an array with one file. Its path is the Cloudinary URL.
+    const image = req.files?.image?.[0]?.path || null;
     const video = req.files?.video?.[0]?.path || null;
+
+    if (!type || !image) {
+      return res.status(400).json({ message: "❌ 'type' and 'image' are required" });
+    }
 
     const banner = new SiteBanner({
       type,
       title: title || null,
       content: content || null,
-      images, // This is now an array of Cloudinary URLs
-      video,  // This is now a single Cloudinary URL or null
+      image,
+      video,
       link: link || null,
       active: active === 'false' || active === false ? false : true
     });
@@ -31,10 +31,12 @@ exports.createBanner = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("Error creating banner:", err); // Log the full error for debugging
+    console.error("Error creating banner:", err);
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
+
+
 
 exports.getBanners = async (req, res) => {
   try {
