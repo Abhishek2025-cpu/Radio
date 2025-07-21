@@ -56,3 +56,22 @@ exports.toggleBanner = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+
+// Delete banner by ID
+exports.deleteBanner = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const banner = await GameBanner.findById(id);
+    if (!banner) {
+      return res.status(404).json({ success: false, message: "Banner not found" });
+    }
+
+    await GameBanner.findByIdAndDelete(id);
+
+    res.json({ success: true, message: "Banner deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};

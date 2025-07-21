@@ -1,6 +1,7 @@
 
 
 const connectMongo = require('./config/db.mongo');
+const mongoose = require('mongoose');
 
 const axios = require("axios");
 const multer = require('multer');

@@ -6,5 +6,7 @@ router.post('/add', uploadStation.single('image'), bannerCtrl.addBanner);
 router.get('/get', bannerCtrl.getBanners);
 router.patch('/update/:id', uploadStation.single('image'), bannerCtrl.updateBanner);
 router.patch('/toggle/:id', bannerCtrl.toggleBanner);
+router.delete("/delete/:id", bannerCtrl.deleteBanner);
+
 
 module.exports = router;
