@@ -1,4 +1,5 @@
 const SiteBanner = require('../../models/mongo/SiteBanner.model');
+
 // No need to require cloudinary here unless you use it for other things like deletion
 // const cloudinary = require('../../utils/cloudinary');
 
@@ -115,30 +116,31 @@ exports.updateBanner = async (req, res) => {
 
 exports.toggleBannerActive = async (req, res) => {
   try {
-    if (typeof req.body.active === "undefined") {
-      return res.status(400).json({ error: '❌ "active" field is required' });
+    const { active } = req.body;
+
+    if (typeof active === "undefined") {
+      return res.status(400).json({ error: '"active" field is required' });
     }
 
     const banner = await SiteBanner.findByIdAndUpdate(
       req.params.id,
-      { $set: { active: req.body.active } },
+      { active: active === "true" || active === true },
       { new: true }
     );
 
-    if (!banner) return res.status(404).json({ error: "❌ Banner not found" });
+    if (!banner) {
+      return res.status(404).json({ error: "Banner not found" });
+    }
 
-    // Emit real-time update
-    const io = getIO();
-    io.emit("banner-updated");
-
-    res.json({
-      message: `✅ Banner is now ${banner.active ? "active" : "inactive"}`,
+    res.status(200).json({
+      message: `Banner is now ${banner.active ? "active" : "inactive"}`,
       data: banner,
     });
   } catch (err) {
-    res.status(500).json({ error: `❌ ${err.message}` });
+    res.status(500).json({ error: err.message });
   }
 };
+
 
 
 
