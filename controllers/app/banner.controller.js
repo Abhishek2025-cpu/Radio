@@ -6,28 +6,33 @@ const cloudinary = require('../../utils/cloudinary');
 
 exports.createBanner = async (req, res) => {
   try {
-    const { type, title, content, link, active } = req.body;
-    let times = req.body.time;
+    // 1. Destructure all fields directly from the body, including 'time'
+    const { type, title, content, link, active, time } = req.body;
 
-    if (!Array.isArray(times)) times = times ? [times] : [];
-
-    const images = (req.files?.images || []).map((file, index) => ({
-      url: file.path,   // Path already contains Cloudinary URL
-      time: times[index] || null
-    }));
+    // 2. Initialize the images object to null
+    let images = null;
+    
+    // 3. Check if an image file was uploaded
+    // Note: We use 'image' (singular) to match the router config below
+    if (req.files && req.files.image && req.files.image[0]) {
+      // 4. If a file exists, create the single image object
+      images = {
+        url: req.files.image[0].path, // The Cloudinary URL
+        time: time || null            // The corresponding time from the form body
+      };
+    }
 
     const video = req.files?.video?.[0]?.path || null;
-    
-const banner = new AppBanner({
-  type,
-  title,
-  content,
-  images,
-  video,
-  link,
-  active: active === 'false' || active === false ? false : true
-});
 
+    const banner = new AppBanner({
+      type,
+      title,
+      content,
+      images, // Pass the single object (or null) here
+      video,
+      link,
+      active: active === 'false' || active === false ? false : true
+    });
 
     await banner.save();
 
@@ -39,7 +44,6 @@ const banner = new AppBanner({
     res.status(500).json({ error: `❌ ${err.message}` });
   }
 };
-
 
 
 exports.getBanners = async (req, res) => {

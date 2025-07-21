@@ -13,12 +13,13 @@ const createUploader = require('../../middlewares/bannerupload');
 
 // 2. Call the function to create a middleware specifically for 'app' banners
 const appBannerUploader = createUploader('app');
+// routes/bannerRoutes.js
 
 router.post(
   '/add-banner',
-  // 3. Use the generated middleware
   appBannerUploader.fields([
-    { name: 'images', maxCount: 10 },
+    // Change 'images' to 'image' and set maxCount to 1
+    { name: 'image', maxCount: 1 }, 
     { name: 'video', maxCount: 1 }
   ]),
   createBanner

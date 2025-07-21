@@ -1,3 +1,4 @@
+// models/AppBanner.js
 const mongoose = require('mongoose');
 
 const appBannerSchema = new mongoose.Schema({
@@ -8,12 +9,11 @@ const appBannerSchema = new mongoose.Schema({
   },
   title: String,
   content: String,
-  images: 
-    {
-      url: String,
-      time: String
-    }
-  ,
+  // This correctly defines a single nested object, NOT an array.
+  images: {
+    url: String,
+    time: String
+  },
   video: String,
   link: String,
   active: { type: Boolean, default: true },
