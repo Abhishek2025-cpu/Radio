@@ -27,14 +27,16 @@ router.post(
 
 router.get('/get-banners', getBanners);
 router.get('/admin-get-banners', adminGetBanners); 
+// routes/bannerRoutes.js
+
 router.put(
   '/update-banner/:id',
-  // This middleware is required to process new files and populate `req.files`.
   appBannerUploader.fields([
-    { name: 'images', maxCount: 10 },
+    // CHANGE THIS: from 'images' to 'image' and maxCount to 1
+    { name: 'image', maxCount: 1 }, 
     { name: 'video', maxCount: 1 }
   ]),
-  updateBanner // Your updated controller function
+  updateBanner // You will also need to adjust the 'updateBanner' controller to handle a single image object
 );
 
 router.patch('/toggle-active/:id',toggleBannerActive);
