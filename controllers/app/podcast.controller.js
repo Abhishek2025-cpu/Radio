@@ -655,3 +655,24 @@ exports.updateGenreShow = async (req, res) => {
 };
 ///////////////podcast//////////////
 
+exports.addPodcast = async (req, res) => {
+  try {
+    const { name, url, genre } = req.body;
+
+    if (!name || !url || !genre) {
+      return res.status(400).json({ message: 'Podcast name, genre, and url are required.' });
+    }
+
+    const podcast = await Podcast.create({
+      name,
+      url,
+      genre,
+      isActive: true
+    });
+
+    res.status(201).json({ message: 'Podcast added successfully.', podcast });
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding podcast', error: error.message });
+  }
+};
+

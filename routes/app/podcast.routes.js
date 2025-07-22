@@ -12,7 +12,7 @@ const {
   updateGenre,
   toggleGenreStatus,
   deleteGenre,
-
+addPodcast,
   getPublicGenres, // Use this new one!
 getAdminGenres,
   // Podcast Handlers
@@ -91,6 +91,6 @@ router.get("/",getAllGenreShows);
 router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
-
+router.post('/add-podcast', addPodcast);
 
 module.exports = router;
