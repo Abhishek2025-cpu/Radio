@@ -12,6 +12,7 @@ const podcastSchema = new mongoose.Schema(
       lowercase: true,
       required: true,
     },
+    url: { type: String, required: true },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Podcast',
