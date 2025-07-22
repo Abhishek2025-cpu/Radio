@@ -94,7 +94,7 @@ router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
 router.post('/add-podcast', addPodcast);
-router.patch('/podcasts/:id/status', togglePodcast);
-router.delete('/podcasts/:id', deletePodcastshow);
+router.patch('/switch/:id', togglePodcast);
+router.delete('/delete-podcast-show/:id', deletePodcastshow);
 
 module.exports = router;
