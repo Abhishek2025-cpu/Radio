@@ -75,7 +75,7 @@ router.get("/admin/:genreName", getSubgenresByGenreNameAdmin);
 
 
 // POST /api/podcasts/create
-// router.post('/create', upload.single('podcastImage'), createPodcast);
+ router.post('/create', uploadStation.single('image'), createPodcast);
 
 // DELETE /api/podcasts/delete/:id
 router.delete('/delete/:id', deletePodcast);
