@@ -29,9 +29,6 @@ getAdminGenres,
   toggleGenreShow,
   deleteGenreShow,
   updateGenreShow,
-  createPodcast,
-  togglePodcastStatus2,
-  deletePodcast,
   getSubgenresByGenreNameAdmin
 } = require('../../controllers/app/podcast.controller');
 
@@ -94,8 +91,6 @@ router.get("/",getAllGenreShows);
 router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
-router.post('/podcasts',createPodcast);
-router.patch('/podcasts/:id/toggle', togglePodcastStatus2);
-router.delete('/podcasts/:id', deletePodcast);
+
 
 module.exports = router;
