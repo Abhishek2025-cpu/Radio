@@ -22,21 +22,31 @@ const genreStorage = new CloudinaryStorage({
 
 const audioStorage = new CloudinaryStorage({
   cloudinary,
-  params: {
+  params: async (req, file) => ({
     folder: 'form-audios',
-    resource_type: 'video', // Cloudinary treats audio as video
-    allowed_formats: ['mp3', 'wav', 'ogg', 'm4a'],
-  },
+    resource_type: 'video', // important: treat audio as video
+    format: path.extname(file.originalname).slice(1), // ensure file extension is used correctly
+    public_id: Date.now() + '-' + path.parse(file.originalname).name,
+  }),
 });
+
+
+
 const fileFilterAudio = (req, file, cb) => {
-  const allowedTypes = /mp3|wav|ogg|m4a/;
-  const mimetype = allowedTypes.test(file.mimetype);
-  const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-  if (mimetype && extname) return cb(null, true);
-  cb(new Error('Only mp3, wav, ogg, m4a files allowed.'));
+  const allowedTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/x-m4a', 'audio/mp4'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only mp3, wav, ogg, m4a files are allowed.'));
+  }
 };
 
-const uploadAudio = multer({ storage: audioStorage, fileFilter: fileFilterAudio });
+
+const uploadAudio = multer({
+  storage: audioStorage,
+  fileFilter: fileFilterAudio,
+});
+
 
 
 const fileFilter = (req, file, cb) => {
