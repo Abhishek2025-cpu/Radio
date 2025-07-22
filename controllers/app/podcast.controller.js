@@ -190,49 +190,17 @@ exports.getPublicGenres = async (req, res) => {
 
 exports.createPodcast = async (req, res) => {
   try {
-    const {
-      name,
-      parent,
-      image,
-      episodes,
-      url,
-      genre,
-      subgenre,
-      season,
-      tags,
-      timestamp
-    } = req.body;
+    // parent can be null (for top-level) or an ID of an existing category
+    const { name, parent, image, episodes } = req.body;
 
-    if (!name || !url || !genre) {
-      return res.status(400).json({ message: 'Podcast name, genre, and url are required.' });
+    if (!name) {
+      return res.status(400).json({ message: 'Podcast name is required.' });
     }
 
-    // If image is uploaded via multer
-    let imageObj = image;
-    if (req.file) {
-      imageObj = {
-        url: req.file.path,
-        public_id: req.file.filename,
-      };
-    }
-
-    const podcast = await Podcast.create({
-      name,
-      parent: parent || null,
-      image: imageObj,
-      episodes: episodes || [],
-      url,
-      genre,
-      subgenre,
-      season: season || "No Season",
-      tags: tags || [],
-      timestamp: timestamp || new Date(),
-      isActive: true
-    });
-
-    res.status(201).json({ message: 'Podcast added successfully.', podcast });
+    const podcast = await Podcast.create({ name, parent, image, episodes });
+    res.status(201).json(podcast);
   } catch (error) {
-    res.status(500).json({ message: 'Error adding podcast', error: error.message });
+    res.status(500).json({ message: 'Error creating podcast', error: error.message });
   }
 };
 
