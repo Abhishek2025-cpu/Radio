@@ -657,7 +657,7 @@ exports.updateGenreShow = async (req, res) => {
 
 exports.addPodcast = async (req, res) => {
   try {
-    const { name, url, genre } = req.body;
+    const { name, url, genre, slug } = req.body;
 
     if (!name || !url || !genre) {
       return res.status(400).json({ message: 'Podcast name, genre, and url are required.' });
@@ -667,6 +667,7 @@ exports.addPodcast = async (req, res) => {
       name,
       url,
       genre,
+      slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
       isActive: true
     });
 
