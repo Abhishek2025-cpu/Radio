@@ -677,3 +677,50 @@ exports.addPodcast = async (req, res) => {
   }
 };
 
+// PATCH /api/podcasts/:id/status
+exports.togglePodcast = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== 'boolean') {
+      return res.status(400).json({ message: 'isActive must be a boolean value.' });
+    }
+
+    const podcast = await Podcast.findByIdAndUpdate(id, { isActive }, { new: true });
+
+    if (!podcast) {
+      return res.status(404).json({ message: 'Podcast not found' });
+    }
+
+    res.status(200).json({ message: `Podcast status updated to ${isActive}`, podcast });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating podcast status', error: error.message });
+  }
+};
+
+// DELETE /api/podcasts/:id
+// DELETE /api/podcasts/:id
+exports.deletePodcastshow = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Prevent deleting if podcast has children
+    const child = await Podcast.findOne({ parent: id });
+    if (child) {
+      return res.status(400).json({
+        message: 'Cannot delete podcast because it has children. Please delete its children first.',
+      });
+    }
+
+    const podcast = await Podcast.findByIdAndDelete(id);
+
+    if (!podcast) {
+      return res.status(404).json({ message: 'Podcast not found' });
+    }
+
+    res.status(200).json({ message: 'Podcast deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting podcast', error: error.message });
+  }
+};

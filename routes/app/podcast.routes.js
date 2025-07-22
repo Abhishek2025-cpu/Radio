@@ -21,8 +21,10 @@ getAdminGenres,
 
  getUniqueGenres,
   deletePodcast,
+   deletePodcastshow,
   getSubgenresByGenreName,
   togglePodcastStatus,
+  togglePodcast,
   //show Handlers
   addShowToGenre,
   getAllGenreShows,
@@ -92,5 +94,7 @@ router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 router.delete("/delete/:identifier", deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
 router.post('/add-podcast', addPodcast);
+router.patch('/podcasts/:id/status', togglePodcast);
+router.delete('/podcasts/:id', deletePodcastshow);
 
 module.exports = router;
