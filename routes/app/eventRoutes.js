@@ -6,5 +6,7 @@ router.post('/add', uploadStation.single('image'), eventCtrl.addEvent);
 router.patch('/update/:id', uploadStation.single('image'), eventCtrl.updateEvent);
 router.delete('/delete/:id', eventCtrl.deleteEvent);
 router.patch('/status/:id', eventCtrl.toggleEvent);
+router.get('/events', eventCtrl.getAllEvents);
+router.get('/events/artist/:artistId', eventCtrl.getEventsByArtistId);
 
 module.exports = router;

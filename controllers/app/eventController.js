@@ -53,3 +53,24 @@ exports.toggleEvent = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// GET /api/events - Get all events
+exports.getAllEvents = async (req, res) => {
+  try {
+    const events = await Event.find();
+    res.json({ success: true, count: events.length, data: events });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+// GET /api/events/artist/:artistId - Get events by artist ID
+exports.getEventsByArtistId = async (req, res) => {
+  try {
+    const { artistId } = req.params;
+    const events = await Event.find({ artist: artistId });
+    res.json({ success: true, count: events.length, data: events });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
