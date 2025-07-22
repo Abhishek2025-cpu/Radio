@@ -8,5 +8,5 @@ router.delete('/delete/:id', eventCtrl.deleteEvent);
 router.patch('/status/:id', eventCtrl.toggleEvent);
 router.get('/all', eventCtrl.getAllEvents);
 router.get('/artist/:artistId', eventCtrl.getEventsByArtistId);
-
+router.get('/single/:id', eventCtrl.getEventById);
 module.exports = router;

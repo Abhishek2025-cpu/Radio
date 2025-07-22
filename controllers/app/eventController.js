@@ -74,3 +74,18 @@ exports.getEventsByArtistId = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+// GET /api/events/:id - Get single event details by event ID, including artist name and image
+exports.getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    // Populate artist name and image if artist is a reference
+    const event = await Event.findById(id).populate('artist', 'name image');
+    if (!event) {
+      return res.status(404).json({ success: false, message: "Event not found" });
+    }
+    res.json({ success: true, event });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
