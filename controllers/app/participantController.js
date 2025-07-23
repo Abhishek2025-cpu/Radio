@@ -1,4 +1,6 @@
 const GameParticipant = require('../../models/mongo/GameParticipant');
+const ParticipationMsg = require('../../models/mongo/ParticipationMsg');
+
 
 exports.submitParticipation = async (req, res) => {
   try {
@@ -51,6 +53,48 @@ exports.deleteParticipant = async (req, res) => {
 
     await GameParticipant.findByIdAndDelete(id);
     res.json({ success: true, message: 'Participant deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+exports.submitParticipationMessage = async (req, res) => {
+  try {
+    const { name, email, city } = req.body;
+    const audio = req.file?.path;
+
+    if (!name || !email || !city || !audio) {
+      return res.status(400).json({ success: false, message: 'All fields are required' });
+    }
+
+    const message = await ParticipationMsg.create({ name, email, city, audio });
+    res.status(201).json({ success: true, message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+exports.getParticipationMessages = async (req, res) => {
+  try {
+    const messages = await ParticipationMsg.find().sort({ createdAt: -1 });
+    res.json({ success: true, messages });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+
+exports.deleteParticipationMessage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = await ParticipationMsg.findById(id);
+    if (!message) {
+      return res.status(404).json({ success: false, message: 'Message not found' });
+    }
+
+    await ParticipationMsg.findByIdAndDelete(id);
+    res.json({ success: true, message: 'Message deleted successfully' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
