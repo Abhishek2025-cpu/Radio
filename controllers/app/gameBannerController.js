@@ -4,18 +4,19 @@ const GameBanner = require('../../models/mongo/GameBanner');
 exports.addBanner = async (req, res) => {
   try {
     const image = req.file?.path;
-    const { title } = req.body;
+    const { title, description } = req.body; // <-- include description
 
     if (!title || !image) {
       return res.status(400).json({ success: false, message: "Title and image are required" });
     }
 
-    const banner = await GameBanner.create({ title, image });
+    const banner = await GameBanner.create({ title, image, description }); // <-- include description
     res.status(201).json({ success: true, banner });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 // Get all banners
 exports.getBanners = async (req, res) => {
