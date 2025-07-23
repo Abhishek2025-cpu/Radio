@@ -1,5 +1,6 @@
 const GameParticipant = require('../../models/mongo/GameParticipant');
 const ParticipationMsg = require('../../models/mongo/ParticipationMsg');
+const GameBanner = require('../../models/mongo/GameBanner');
 
 
 exports.submitParticipation = async (req, res) => {
@@ -61,28 +62,39 @@ exports.deleteParticipant = async (req, res) => {
 
 exports.submitParticipationMessage = async (req, res) => {
   try {
-    const { name, email, city } = req.body;
+    const { name, email, city, game } = req.body;
     const audio = req.file?.path;
 
-    if (!name || !email || !city || !audio) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    if (!name || !email || !city || !audio || !game) {
+      return res.status(400).json({ success: false, message: 'All fields are required including game' });
     }
 
-    const message = await ParticipationMsg.create({ name, email, city, audio });
+    // Optional: validate game ID exists
+    const gameExists = await GameBanner.findById(game);
+    if (!gameExists) {
+      return res.status(404).json({ success: false, message: 'Invalid game ID' });
+    }
+
+    const message = await ParticipationMsg.create({ name, email, city, audio, game });
     res.status(201).json({ success: true, message });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
 
+
 exports.getParticipationMessages = async (req, res) => {
   try {
-    const messages = await ParticipationMsg.find().sort({ createdAt: -1 });
+    const messages = await ParticipationMsg.find()
+      .sort({ createdAt: -1 })
+      .populate('game', 'title'); // populate game title only
+
     res.json({ success: true, messages });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
 
 
 exports.deleteParticipationMessage = async (req, res) => {
