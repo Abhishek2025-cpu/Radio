@@ -11,6 +11,42 @@ const stationStorage = new CloudinaryStorage({
   },
 });
 
+
+const mediaStorage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => {
+    const isVideo = file.mimetype.startsWith('video');
+    return {
+      folder: 'game-participations',
+      resource_type: isVideo ? 'video' : 'image',
+      format: path.extname(file.originalname).slice(1),
+      public_id: Date.now() + '-' + path.parse(file.originalname).name,
+    };
+  },
+});
+
+const fileFilterMedia = (req, file, cb) => {
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/jpg',
+    'video/mp4', 'video/quicktime', 'video/webm'
+  ];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only image and video files are allowed.'));
+  }
+};
+
+const uploadMedia = multer({
+  storage: mediaStorage,
+  fileFilter: fileFilterMedia,
+  limits: {
+    fileSize: 50 * 1024 * 1024 // optional: max 50MB
+  }
+});
+
+
+
 const genreStorage = new CloudinaryStorage({
   cloudinary,
   params: {
@@ -60,4 +96,4 @@ const fileFilter = (req, file, cb) => {
 const uploadStation = multer({ storage: stationStorage, fileFilter });
 const uploadGenre = multer({ storage: genreStorage, fileFilter });
 
-module.exports = { uploadStation, uploadGenre, uploadAudio };
+module.exports = { uploadStation, uploadGenre, uploadAudio, uploadMedia };
