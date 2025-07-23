@@ -6,7 +6,7 @@ router.post('/submit', uploadMedia.single('media'), participantCtrl.submitPartic
 router.get('/:gameId', participantCtrl.getParticipantsByGame);
 router.delete('/delete/:id', participantCtrl.deleteParticipant);
 router.post('/participation-msg', uploadAudio.single('audio'), participantCtrl.submitParticipationMessage);
-router.get('/get-participation-msgs', participantCtrl.getParticipationMessages);
+router.get('/msg/game/:gameId', participantCtrl.getParticipationMessages);
 router.delete('/delete-participation-msg/:id', participantCtrl.deleteParticipationMessage);
 
 module.exports = router;
