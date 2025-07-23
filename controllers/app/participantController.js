@@ -31,9 +31,6 @@ exports.getParticipantsByGame = async (req, res) => {
 
 
 
-const GameParticipant = require('../../models/GameParticipant'); // adjust path if needed
-const fs = require('fs');
-const path = require('path');
 
 exports.deleteParticipant = async (req, res) => {
   try {
