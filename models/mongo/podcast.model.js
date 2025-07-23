@@ -7,22 +7,23 @@ const podcastSchema = new mongoose.Schema(
       required: [true, 'Podcast name is required.'],
       trim: true,
     },
-    slug: {
+    subgenre: { // <-- Renamed from 'slug'
       type: String,
       lowercase: true,
       required: true,
     },
     url: { type: String },
+    genre: {
+      type: String,
+      required: true,
+    },
     parent: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Podcast',
-      default: null, // A null parent IS a top-level category/genre
+      default: null,
     },
-    // The image field holds the URL for this specific item.
-    // If it's a category, this is the category image.
-    // If it's a sub-show, it can have its own image too.
     image: {
-      type: String, 
+      type: String,
       default: '',
     },
     isActive: {
@@ -42,6 +43,7 @@ const podcastSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
 
 // ... rest of your model file (indexes, pre-save hooks) ...
 

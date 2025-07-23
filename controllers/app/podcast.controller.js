@@ -657,19 +657,20 @@ exports.updateGenreShow = async (req, res) => {
 
 exports.addPodcast = async (req, res) => {
   try {
-    const { name, url, genre, slug } = req.body;
+    const { name, url, genre, slug: subgenre } = req.body;
 
     if (!name || !url || !genre) {
       return res.status(400).json({ message: 'Podcast name, genre, and url are required.' });
     }
 
-    const podcast = await Podcast.create({
-      name,
-      url,
-      genre,
-      slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
-      isActive: true
-    });
+   const podcast = await Podcast.create({
+  name,
+  url,
+  genre,
+  subgenre,
+  isActive: true
+});
+
 
     res.status(201).json({ message: 'Podcast added successfully.', podcast });
   } catch (error) {
