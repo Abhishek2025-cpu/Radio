@@ -92,7 +92,7 @@ router.post("/:genreName/add", uploadStation.single("image"), addShowToGenre);
 router.get("/",getAllGenreShows);
 router.put("/:genreName/toggle/:identifier",toggleGenreShow);
 // DELETE /api/podcasts/:genreName/shows/:showId
-router.delete('/:genreName/delete/:showId', deleteGenreShow);
+router.delete('/:genreName/shows/:showId', deleteGenreShow);
 router.put("/:genreName/update/:showId", uploadStation.single("image"),updateGenreShow);
 router.post('/add-podcast', addPodcast);
 router.patch('/switch/:id', togglePodcast);
