@@ -607,8 +607,13 @@ exports.deleteGenreShow = async (req, res) => {
   try {
     const { identifier } = req.params;
 
+    // Try to delete by _id first, then fallback to name or image.public_id
     const deleted = await GenreShow.findOneAndDelete({
-      $or: [{ name: identifier }, { "image.public_id": identifier }],
+      $or: [
+        { _id: identifier },
+        { name: identifier },
+        { "image.public_id": identifier }
+      ],
     });
 
     if (!deleted) {
