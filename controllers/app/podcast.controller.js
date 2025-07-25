@@ -607,19 +607,12 @@ exports.toggleGenreShow = async (req, res) => {
 
 exports.deleteGenreShow = async (req, res) => {
   try {
-    const { identifier } = req.params;
+    const { genreName, showId } = req.params;
 
-    // Only use _id if identifier is a valid ObjectId
-    const orConditions = [
-      { name: identifier },
-      { "image.public_id": identifier }
-    ];
-    if (mongoose.Types.ObjectId.isValid(identifier)) {
-      orConditions.unshift({ _id: identifier });
-    }
-
+    // Find and delete the show by _id and genreName for safety
     const deleted = await GenreShow.findOneAndDelete({
-      $or: orConditions,
+      _id: showId,
+      genreName: genreName,
     });
 
     if (!deleted) {
@@ -631,6 +624,8 @@ exports.deleteGenreShow = async (req, res) => {
     res.status(500).json({ message: "Error deleting genre show.", error: error.message });
   }
 };
+
+
 
 exports.updateGenreShow = async (req, res) => {
   try {
