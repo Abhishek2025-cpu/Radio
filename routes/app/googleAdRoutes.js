@@ -7,5 +7,6 @@ router.post('/add', uploadStation.single('image'), adCtrl.addGoogleAd);
 router.get('/get', adCtrl.getGoogleAds);
 router.patch('/update/:id', uploadStation.single('image'), adCtrl.updateGoogleAd);
 router.patch('/toggle/:id', adCtrl.toggleGoogleAd);
+router.delete('/delete-ads/:id', googleAdController.deleteGoogleAd);
 
 module.exports = router;
