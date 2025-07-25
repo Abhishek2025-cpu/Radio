@@ -84,3 +84,19 @@ exports.toggleGoogleAd = async (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 };
+
+
+
+// DELETE /api/google-ads/:id
+exports.deleteGoogleAd = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ad = await GoogleAd.findByIdAndDelete(id);
+    if (!ad) {
+      return res.status(404).json({ message: "Ad not found" });
+    }
+    res.json({ success: true, message: "Ad deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
