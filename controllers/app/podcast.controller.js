@@ -603,17 +603,23 @@ exports.toggleGenreShow = async (req, res) => {
 
 
 
+
+
 exports.deleteGenreShow = async (req, res) => {
   try {
     const { identifier } = req.params;
 
-    // Try to delete by _id first, then fallback to name or image.public_id
+    // Only use _id if identifier is a valid ObjectId
+    const orConditions = [
+      { name: identifier },
+      { "image.public_id": identifier }
+    ];
+    if (mongoose.Types.ObjectId.isValid(identifier)) {
+      orConditions.unshift({ _id: identifier });
+    }
+
     const deleted = await GenreShow.findOneAndDelete({
-      $or: [
-        { _id: identifier },
-        { name: identifier },
-        { "image.public_id": identifier }
-      ],
+      $or: orConditions,
     });
 
     if (!deleted) {
